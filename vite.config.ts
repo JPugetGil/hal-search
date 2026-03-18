@@ -19,6 +19,6 @@ export default defineConfig({
       external: [],
     },
     sourcemap: true,
-    minify: 'esbuild',
+    minify: 'oxc',
   },
 });
