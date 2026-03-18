@@ -180,11 +180,6 @@ export const DEFAULT_CSS = `
   font-style: italic;
 }
 
-/* Footer */
-.hal-article__footer {
-  margin-top: 12px;
-}
-
 .hal-article__link {
   font-size: 0.82rem;
   color: var(--hal-accent);

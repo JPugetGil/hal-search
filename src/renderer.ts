@@ -17,6 +17,13 @@ function text(content: string): Text {
   return document.createTextNode(content);
 }
 
+/** Decodes HTML entities (e.g. &#x27E8;) into their actual characters. */
+function decodeEntities(raw: string): string {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = raw;
+  return textarea.value;
+}
+
 /** Creates an <a> element with href validated to start with https:// */
 function safeLink(href: string | undefined, label: string, className?: string): HTMLAnchorElement {
   const a = el('a', className);
@@ -91,7 +98,7 @@ function buildArticleCard(doc: HalDoc, lvl: DetailLevel): HTMLElement {
       meta.appendChild(date);
     }
 
-    if (doc.docType_s) {
+    if (doc.docType_s && doc.docType_s.toUpperCase() !== 'UNDEFINED') {
       const badge = el('span', 'hal-badge');
       badge.textContent = doc.docType_s;
       meta.appendChild(badge);
@@ -105,10 +112,10 @@ function buildArticleCard(doc: HalDoc, lvl: DetailLevel): HTMLElement {
 
     header.appendChild(meta);
   } else {
-    // lvl 0: just the full citation label
-    const label = el('p', 'hal-article__label');
-    label.textContent = doc.label_s ?? doc.docid ?? '';
-    header.appendChild(label);
+    // lvl 0: just the full citation
+    const div = el('div', 'hal-article__label');
+    div.appendChild(safeLink(doc.uri_s, decodeEntities(doc.label_s ?? doc.docid ?? ''), 'hal-article__link'));
+    header.appendChild(div);
   }
 
   article.appendChild(header);
@@ -150,13 +157,6 @@ function buildArticleCard(doc: HalDoc, lvl: DetailLevel): HTMLElement {
 
       article.appendChild(details);
     }
-  }
-
-  // --- Footer ---
-  if (doc.uri_s) {
-    const footer = el('footer', 'hal-article__footer');
-    footer.appendChild(safeLink(doc.uri_s, 'View on HAL →', 'hal-article__link'));
-    article.appendChild(footer);
   }
 
   return article;
