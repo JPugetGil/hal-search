@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>hal-search — dev sandbox</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 2rem;
+        font-family: system-ui, sans-serif;
+        background: #f5f7fa;
+      }
+      h1 { margin: 0 0 1.5rem; font-size: 1.4rem; color: #1a1a1a; }
+      .controls {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .controls input[type="text"] {
+        flex: 1;
+        min-width: 220px;
+        padding: 8px 12px;
+        border: 1px solid #d0d0d0;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+      .controls select,
+      .controls input[type="number"] {
+        padding: 8px 10px;
+        border: 1px solid #d0d0d0;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+      .controls button {
+        padding: 8px 20px;
+        background: #0052cc;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      .controls button:hover { background: #003d99; }
+      label { font-size: 0.85rem; color: #555; }
+      #results { margin-top: 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>hal-search dev sandbox</h1>
+
+    <div class="controls">
+      <input
+        id="uid-input"
+        type="text"
+        placeholder="Author UID or search query (e.g. authIdHal_s:jdupont)"
+        value="jpugetgil"
+      />
+
+      <label>
+        Level
+        <select id="lvl-select">
+          <option value="0">0 — minimal</option>
+          <option value="1" selected>1 — basic</option>
+          <option value="2">2 — detailed</option>
+          <option value="3">3 — full</option>
+        </select>
+      </label>
+
+      <label>
+        Rows
+        <input id="rows-input" type="number" value="5" min="1" max="100" style="width:70px" />
+      </label>
+
+      <button id="search-btn">Search</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script type="module">
+      import { HalSearch } from '/src/index.ts';
+
+      const hs = new HalSearch({
+        container: '#results',
+        lvl: 1,
+        rows: 5,
+        onResults: (r) => {
+          console.log(`[hal-search] ${r.response.numFound} results found`);
+        },
+        onError: (err) => {
+          console.error('[hal-search] error:', err.message);
+        },
+      });
+
+      document.getElementById('search-btn').addEventListener('click', () => {
+        const uid = document.getElementById('uid-input').value.trim();
+        const lvl = parseInt(document.getElementById('lvl-select').value, 10);
+        const rows = parseInt(document.getElementById('rows-input').value, 10);
+        if (!uid) return;
+        hs.setLevel(lvl);
+        hs.search({ uid, rows });
+      });
+
+      // Run initial search on load
+      hs.search({ uid: 'jpugetgil', rows: 5 });
+    </script>
+  </body>
+</html>

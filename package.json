@@ -1,0 +1,30 @@
+{
+  "name": "hal-search",
+  "version": "0.1.0",
+  "description": "A library to display article descriptions fetched from the HAL Open Archive API",
+  "type": "module",
+  "main": "./dist/hal-search.umd.js",
+  "module": "./dist/hal-search.es.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/hal-search.es.js",
+      "require": "./dist/hal-search.umd.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "example": "npm run build && npx serve -l 8080 ."
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0",
+    "vite-plugin-dts": "^3.9.0"
+  }
+}

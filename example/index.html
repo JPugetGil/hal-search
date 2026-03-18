@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>hal-search — Example</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f0f4f8;
+        color: #1a1a2e;
+        min-height: 100vh;
+      }
+
+      /* ── Header ─────────────────────────────── */
+      .site-header {
+        background: #0052cc;
+        color: #fff;
+        padding: 28px 32px 24px;
+      }
+
+      .site-header h1 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 4px;
+      }
+
+      .site-header p {
+        font-size: 0.92rem;
+        opacity: 0.85;
+      }
+
+      /* ── Layout ─────────────────────────────── */
+      .layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 0;
+        max-width: 1200px;
+        margin: 0 auto;
+        min-height: calc(100vh - 88px);
+      }
+
+      /* ── Sidebar ─────────────────────────────── */
+      .sidebar {
+        background: #fff;
+        border-right: 1px solid #e0e4ea;
+        padding: 24px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .sidebar section { display: flex; flex-direction: column; gap: 10px; }
+
+      .sidebar h2 {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #888;
+        margin-bottom: 2px;
+      }
+
+      .sidebar label {
+        font-size: 0.85rem;
+        color: #444;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-weight: 500;
+      }
+
+      .sidebar input[type="text"],
+      .sidebar input[type="number"],
+      .sidebar select {
+        padding: 8px 10px;
+        border: 1px solid #d0d4da;
+        border-radius: 6px;
+        font-size: 0.88rem;
+        width: 100%;
+        background: #fafafa;
+        color: #1a1a2e;
+        transition: border-color 0.15s;
+      }
+
+      .sidebar input:focus,
+      .sidebar select:focus {
+        outline: none;
+        border-color: #0052cc;
+        background: #fff;
+      }
+
+      .search-btn {
+        width: 100%;
+        padding: 10px;
+        background: #0052cc;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .search-btn:hover { background: #003d99; }
+      .search-btn:active { background: #002b75; }
+
+      /* Level descriptions */
+      .level-desc {
+        font-size: 0.78rem;
+        color: #666;
+        background: #f5f7fa;
+        border-radius: 5px;
+        padding: 8px 10px;
+        line-height: 1.5;
+      }
+
+      .level-desc strong { color: #0052cc; display: block; margin-bottom: 2px; }
+
+      /* Quick-search chips */
+      .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+      .chip {
+        padding: 4px 10px;
+        border: 1px solid #d0d4da;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        cursor: pointer;
+        background: #fff;
+        color: #444;
+        transition: all 0.12s;
+      }
+
+      .chip:hover {
+        border-color: #0052cc;
+        color: #0052cc;
+        background: #f0f4ff;
+      }
+
+      /* ── Main content ─────────────────────────── */
+      .main {
+        padding: 28px 28px;
+        overflow-y: auto;
+      }
+
+      .main-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        min-height: 28px;
+      }
+
+      .result-count {
+        font-size: 0.85rem;
+        color: #666;
+      }
+
+      #results {
+        /* HalSearch renders inside here */
+      }
+
+      /* ── Responsive ─────────────────────────── */
+      @media (max-width: 720px) {
+        .layout { grid-template-columns: 1fr; }
+        .sidebar { border-right: none; border-bottom: 1px solid #e0e4ea; }
+      }
+    </style>
+  </head>
+  <body>
+
+    <header class="site-header">
+      <h1>hal-search</h1>
+      <p>Browse articles from the HAL Open Archive API</p>
+    </header>
+
+    <div class="layout">
+
+      <!-- ── Sidebar ── -->
+      <aside class="sidebar">
+
+        <section>
+          <h2>Search</h2>
+          <label>
+            Query / Author UID
+            <input
+              id="uid-input"
+              type="text"
+              placeholder="e.g. machine learning"
+              value="jpugetgil"
+            />
+          </label>
+          <button class="search-btn" id="search-btn">Search HAL</button>
+        </section>
+
+        <section>
+          <h2>Quick searches</h2>
+          <div class="chips">
+            <span class="chip" data-query="deep learning">deep learning</span>
+            <span class="chip" data-query="computer vision">computer vision</span>
+            <span class="chip" data-query="natural language processing">NLP</span>
+            <span class="chip" data-query="climate change">climate</span>
+            <span class="chip" data-query="quantum computing">quantum</span>
+            <span class="chip" data-query="bioinformatics">bioinformatics</span>
+          </div>
+        </section>
+
+        <section>
+          <h2>Detail level</h2>
+          <label>
+            Level
+            <select id="lvl-select">
+              <option value="0">0 — Minimal</option>
+              <option value="1" selected>1 — Basic</option>
+              <option value="2">2 — Detailed</option>
+              <option value="3">3 — Full</option>
+            </select>
+          </label>
+          <div class="level-desc" id="level-desc"></div>
+        </section>
+
+        <section>
+          <h2>Results per page</h2>
+          <label>
+            Rows
+            <input id="rows-input" type="number" value="5" min="1" max="50" />
+          </label>
+        </section>
+
+      </aside>
+
+      <!-- ── Main ── -->
+      <main class="main">
+        <div class="main-header">
+          <span class="result-count" id="result-count"></span>
+        </div>
+        <div id="results"></div>
+      </main>
+
+    </div>
+
+    <script type="module">
+      import { HalSearch } from './hal-search.es.js';
+
+      // ── Level descriptions ─────────────────────
+      const LEVEL_DESCRIPTIONS = {
+        0: { label: 'Minimal', fields: 'Citation label + link to HAL' },
+        1: { label: 'Basic',   fields: 'Title, authors, date, document type' },
+        2: { label: 'Detailed',fields: 'All basic fields + keywords, domains, open access badge, conference' },
+        3: { label: 'Full',    fields: 'All available HAL fields (fl=*)' },
+      };
+
+      function updateLevelDesc(lvl) {
+        const d = LEVEL_DESCRIPTIONS[lvl];
+        const el = document.getElementById('level-desc');
+        el.innerHTML = `<strong>${d.label}</strong>${d.fields}`;
+      }
+
+      // ── Init HalSearch ─────────────────────────
+      const hs = new HalSearch({
+        container: '#results',
+        lvl: 1,
+        rows: 5,
+        onResults: (r) => {
+          const count = r.response.numFound.toLocaleString();
+          document.getElementById('result-count').textContent =
+            `${count} article${r.response.numFound !== 1 ? 's' : ''} found`;
+        },
+        onError: (err) => {
+          document.getElementById('result-count').textContent = '';
+          console.error('[hal-search]', err.message);
+        },
+      });
+
+      // ── Run search ─────────────────────────────
+      function runSearch() {
+        const uid  = document.getElementById('uid-input').value.trim();
+        const lvl  = parseInt(document.getElementById('lvl-select').value, 10);
+        const rows = parseInt(document.getElementById('rows-input').value, 10) || 5;
+        if (!uid) return;
+        document.getElementById('result-count').textContent = '';
+        hs.setLevel(lvl);
+        hs.search({ uid, rows });
+      }
+
+      // ── Events ────────────────────────────────
+      document.getElementById('search-btn').addEventListener('click', runSearch);
+
+      document.getElementById('uid-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') runSearch();
+      });
+
+      document.getElementById('lvl-select').addEventListener('change', (e) => {
+        updateLevelDesc(parseInt(e.target.value, 10));
+        runSearch();
+      });
+
+      document.querySelectorAll('.chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          document.getElementById('uid-input').value = chip.dataset.query;
+          runSearch();
+        });
+      });
+
+      // ── Initial state ─────────────────────────
+      updateLevelDesc(1);
+      runSearch();
+    </script>
+
+  </body>
+</html>
