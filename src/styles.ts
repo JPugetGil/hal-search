@@ -19,7 +19,7 @@ export const DEFAULT_CSS = `
 .hal-results {
   font-family: var(--hal-font);
   color: var(--hal-text);
-  max-width: 860px;
+  width: 100%;
 }
 
 /* Loading state */
