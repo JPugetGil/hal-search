@@ -164,6 +164,64 @@
         /* HalSearch renders inside here */
       }
 
+      /* ── Embed section ──────────────────────── */
+      .embed-snippet {
+        position: relative;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        border-radius: 6px;
+        padding: 12px 14px;
+        font-family: monospace;
+        font-size: 0.78rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-all;
+        overflow-x: auto;
+      }
+
+      .copy-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 4px 10px;
+        background: #45475a;
+        color: #cdd6f4;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        cursor: pointer;
+      }
+
+      .copy-btn:hover { background: #585b70; }
+
+      .embed-preview {
+        margin-top: 12px;
+        border: 1px solid #d0d4da;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+
+      .embed-preview iframe {
+        display: block;
+        width: 100%;
+        height: 500px;
+        border: none;
+      }
+
+      .embed-toggle {
+        width: 100%;
+        padding: 8px;
+        background: #f5f7fa;
+        border: 1px solid #d0d4da;
+        border-radius: 6px;
+        font-size: 0.82rem;
+        cursor: pointer;
+        color: #0052cc;
+        font-weight: 500;
+      }
+
+      .embed-toggle:hover { background: #e8ecf2; }
+
       /* ── Responsive ─────────────────────────── */
       @media (max-width: 720px) {
         .layout { grid-template-columns: 1fr; }
@@ -231,6 +289,11 @@
           </label>
         </section>
 
+        <section>
+          <h2>Embed</h2>
+          <button class="embed-toggle" id="embed-toggle">Show embed code</button>
+        </section>
+
       </aside>
 
       <!-- ── Main ── -->
@@ -239,6 +302,18 @@
           <span class="result-count" id="result-count"></span>
         </div>
         <div id="results"></div>
+
+        <!-- Embed panel (hidden by default) -->
+        <div id="embed-panel" style="display:none; margin-top: 24px;">
+          <h3 style="font-size:0.9rem; margin-bottom:10px; color:#444;">Embed this search</h3>
+          <div class="embed-snippet" id="embed-snippet">
+            <button class="copy-btn" id="copy-btn">Copy</button>
+            <code id="embed-code"></code>
+          </div>
+          <div class="embed-preview">
+            <iframe id="embed-iframe" title="hal-search embed preview"></iframe>
+          </div>
+        </div>
       </main>
 
     </div>
@@ -260,6 +335,39 @@
         el.innerHTML = `<strong>${d.label}</strong>${d.fields}`;
       }
 
+      // ── Embed panel ────────────────────────────
+      const embedPanel  = document.getElementById('embed-panel');
+      const embedToggle = document.getElementById('embed-toggle');
+      const embedCode   = document.getElementById('embed-code');
+      const embedIframe = document.getElementById('embed-iframe');
+      const copyBtn     = document.getElementById('copy-btn');
+      let embedVisible  = false;
+
+      function updateEmbed() {
+        const uid  = document.getElementById('uid-input').value.trim();
+        const lvl  = document.getElementById('lvl-select').value;
+        const rows = document.getElementById('rows-input').value;
+        const base = window.location.href.replace(/\/[^/]*$/, '');
+        const embedUrl = `${base}/embed.html?uid=${encodeURIComponent(uid)}&lvl=${lvl}&rows=${rows}`;
+        const snippet = `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" style="border:none;"></iframe>`;
+        embedCode.textContent = snippet;
+        embedIframe.src = embedUrl;
+      }
+
+      embedToggle.addEventListener('click', () => {
+        embedVisible = !embedVisible;
+        embedPanel.style.display = embedVisible ? 'block' : 'none';
+        embedToggle.textContent = embedVisible ? 'Hide embed code' : 'Show embed code';
+        if (embedVisible) updateEmbed();
+      });
+
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(embedCode.textContent).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+        });
+      });
+
       // ── Init HalSearch ─────────────────────────
       const hs = new HalSearch({
         container: '#results',
@@ -269,6 +377,7 @@
           const count = r.response.numFound.toLocaleString();
           document.getElementById('result-count').textContent =
             `${count} article${r.response.numFound !== 1 ? 's' : ''} found`;
+          if (embedVisible) updateEmbed();
         },
         onError: (err) => {
           document.getElementById('result-count').textContent = '';

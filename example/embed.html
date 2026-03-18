@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>hal-search embed</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: transparent;
+      }
+      #hal-embed { padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="hal-embed"></div>
+
+    <script type="module">
+      import { HalSearch } from './hal-search.es.js';
+
+      // ── Read configuration from URL parameters ──
+      const params = new URLSearchParams(window.location.search);
+      const uid  = params.get('uid')  || '*:*';
+      const lvl  = Math.min(3, Math.max(0, parseInt(params.get('lvl') || '1', 10)));
+      const rows = Math.min(50, Math.max(1, parseInt(params.get('rows') || '10', 10)));
+
+      const hs = new HalSearch({
+        container: '#hal-embed',
+        lvl,
+        rows,
+      });
+
+      hs.search({ uid });
+    </script>
+  </body>
+</html>
