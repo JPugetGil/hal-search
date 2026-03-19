@@ -9,6 +9,8 @@ export interface EmbedOptions {
   lvl?: DetailLevel;
   /** Results per page */
   rows?: number;
+  /** Render mode: 'html' (default) for interactive cards, 'svg' for a static SVG */
+  type?: 'html' | 'svg';
   /** iframe width (CSS value) */
   width?: string;
   /** iframe height (CSS value) */
@@ -20,6 +22,7 @@ export function buildEmbedUrl(options: EmbedOptions): string {
   const params = new URLSearchParams({ uid: options.uid });
   if (options.lvl !== undefined) params.set('lvl', String(options.lvl));
   if (options.rows !== undefined) params.set('rows', String(options.rows));
+  if (options.type) params.set('type', options.type);
   return `${options.embedBase}/embed.html?${params.toString()}`;
 }
 

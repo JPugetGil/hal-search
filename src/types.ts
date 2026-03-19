@@ -58,6 +58,8 @@ export interface HalSearchOptions {
   rows?: number;
   /** Inject default CSS into <head>. Default: true */
   injectStyles?: boolean;
+  /** Render the article list as HTML cards or as an inline SVG. Default: 'html' */
+  output?: 'html' | 'svg';
   /** Called after each successful fetch */
   onResults?: (response: HalApiResponse) => void;
   /** Called on fetch error */

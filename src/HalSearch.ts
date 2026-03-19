@@ -7,6 +7,7 @@ import type {
 } from './types';
 import { fetchArticles, DEFAULT_BASE } from './api';
 import { renderResults, renderLoading, renderError } from './renderer';
+import { renderResultsSvg } from './svg-renderer';
 import { injectDefaultStyles } from './styles';
 
 const DEFAULTS = {
@@ -14,6 +15,7 @@ const DEFAULTS = {
   rows: 10,
   apiBase: DEFAULT_BASE,
   injectStyles: true,
+  output: 'html' as 'html' | 'svg',
 };
 
 export class HalSearch {
@@ -33,6 +35,7 @@ export class HalSearch {
       rows: options.rows ?? DEFAULTS.rows,
       apiBase: options.apiBase ?? DEFAULTS.apiBase,
       injectStyles: options.injectStyles ?? DEFAULTS.injectStyles,
+      output: options.output ?? DEFAULTS.output,
       onResults: options.onResults,
       onError: options.onError,
     };
@@ -115,13 +118,22 @@ export class HalSearch {
 
       this._updatePagination(response, start);
 
-      renderResults(
-        this.container,
-        response.response.docs,
-        this.options.lvl,
-        this.pagination,
-        (page) => { void this.goToPage(page); },
-      );
+      if (this.options.output === 'svg') {
+        renderResultsSvg(
+          this.container,
+          response.response.docs,
+          this.options.lvl,
+          this.pagination,
+        );
+      } else {
+        renderResults(
+          this.container,
+          response.response.docs,
+          this.options.lvl,
+          this.pagination,
+          (page) => { void this.goToPage(page); },
+        );
+      }
 
       this.options.onResults?.(response);
     } catch (err) {

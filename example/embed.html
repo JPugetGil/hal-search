@@ -21,14 +21,16 @@
 
       // ── Read configuration from URL parameters ──
       const params = new URLSearchParams(window.location.search);
-      const uid  = params.get('uid')  || '*:*';
-      const lvl  = Math.min(3, Math.max(0, parseInt(params.get('lvl') || '1', 10)));
-      const rows = Math.min(50, Math.max(1, parseInt(params.get('rows') || '10', 10)));
+      const uid    = params.get('uid')  || '*:*';
+      const lvl    = Math.min(3, Math.max(0, parseInt(params.get('lvl') || '1', 10)));
+      const rows   = Math.min(50, Math.max(1, parseInt(params.get('rows') || '10', 10)));
+      const type   = params.get('type') === 'svg' ? 'svg' : 'html';
 
       const hs = new HalSearch({
         container: '#hal-embed',
         lvl,
         rows,
+        output: type,
       });
 
       hs.search({ uid });
