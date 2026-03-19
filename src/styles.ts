@@ -180,6 +180,13 @@ export const DEFAULT_CSS = `
   font-style: italic;
 }
 
+.hal-article__abstract {
+  font-size: 0.85rem;
+  color: var(--hal-text);
+  line-height: 1.55;
+  margin-top: 4px;
+}
+
 .hal-article__link {
   font-size: 0.82rem;
   color: var(--hal-accent);
@@ -187,6 +194,23 @@ export const DEFAULT_CSS = `
 }
 
 .hal-article__link:hover {
+  text-decoration: underline;
+}
+
+/* Footer credit */
+.hal-footer {
+  margin-top: 12px;
+  text-align: right;
+  font-size: 0.75rem;
+}
+
+.hal-footer__link {
+  color: var(--hal-text-muted);
+  text-decoration: none;
+}
+
+.hal-footer__link:hover {
+  color: var(--hal-accent);
   text-decoration: underline;
 }
 

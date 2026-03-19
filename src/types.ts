@@ -20,6 +20,7 @@ export interface HalDoc {
   language_s?: string[];
   peerReviewing_s?: string;
   conferenceTitle_s?: string;
+  abstract_s?: string[];
   version_i?: number;
   structName_s?: string[];
   submittedDate_s?: string;

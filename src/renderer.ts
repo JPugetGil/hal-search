@@ -155,6 +155,12 @@ function buildArticleCard(doc: HalDoc, lvl: DetailLevel): HTMLElement {
         details.appendChild(conf);
       }
 
+      if (lvl === 3 && doc.abstract_s?.[0]) {
+        const abstract = el('div', 'hal-article__abstract');
+        abstract.textContent = doc.abstract_s[0];
+        details.appendChild(abstract);
+      }
+
       article.appendChild(details);
     }
   }
@@ -222,6 +228,11 @@ export function renderResults(
   if (pagination.totalFound > pagination.rows) {
     wrapper.appendChild(buildPagination(pagination, onPageChange));
   }
+
+  const footer = el('div', 'hal-footer');
+  const credit = safeLink('https://github.com/JPugetGil/hal-search', 'hal-search', 'hal-footer__link');
+  footer.appendChild(credit);
+  wrapper.appendChild(footer);
 
   container.appendChild(wrapper);
 }

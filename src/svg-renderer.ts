@@ -5,6 +5,8 @@ const W = 800;
 const PAD = 16;
 const CARD_GAP = 8;
 const HEADER_H = 50;
+const FOOTER_H = 28;
+const GITHUB_URL = 'https://github.com/JPugetGil/hal-search';
 
 /** Default colour palette — mirrors CSS-variable defaults from styles.ts */
 const C = {
@@ -23,6 +25,13 @@ const C = {
   domainBg: '#dbeafe',
   domainColor: '#1a56db',
 };
+
+// Abstract rendering constants
+const ABSTRACT_FS = 11;
+const ABSTRACT_LINE_H = 15;
+const ABSTRACT_MAX_LINES = 3;
+const ABSTRACT_LABEL_H = 18;
+const ABSTRACT_TOP_GAP = 10;
 
 // ---------------------------------------------------------------------------
 // SVG helpers
@@ -96,9 +105,80 @@ function pill(
   return bw + 4;
 }
 
+/**
+ * Word-wraps `content` into SVG tspan elements appended to a <text> node.
+ * Returns the total pixel height consumed (lines × lineHeight).
+ */
+function wrapText(
+  parent: SVGElement,
+  x: number, baseY: number,
+  content: string,
+  maxPx: number,
+  fontSize: number,
+  lineHeight: number,
+  fill: string,
+  maxLines = ABSTRACT_MAX_LINES,
+): number {
+  const maxChars = Math.floor(maxPx / (fontSize * 0.52));
+  const words = content.split(/\s+/);
+  const lines: string[] = [];
+  let cur = '';
+  let truncated = false;
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i]!;
+    const test = cur ? `${cur} ${word}` : word;
+    if (test.length <= maxChars) {
+      cur = test;
+    } else {
+      if (cur) lines.push(cur);
+      if (lines.length >= maxLines) { truncated = true; break; }
+      cur = word;
+    }
+  }
+  if (!truncated && cur) {
+    lines.push(cur);
+  } else if (truncated && lines.length > 0) {
+    lines[lines.length - 1] += '…';
+  }
+
+  const t = svgEl('text');
+  set(t, { x, y: baseY, 'font-size': fontSize, fill, 'font-family': 'system-ui,-apple-system,sans-serif' });
+  for (let i = 0; i < lines.length; i++) {
+    const ts = svgEl('tspan');
+    ts.setAttribute('x', String(x));
+    if (i > 0) ts.setAttribute('dy', String(lineHeight));
+    ts.textContent = lines[i]!;
+    t.appendChild(ts);
+  }
+  parent.appendChild(t);
+  return lines.length * lineHeight;
+}
+
 // ---------------------------------------------------------------------------
 // Card geometry
 // ---------------------------------------------------------------------------
+
+/** Returns the extra height added by the abstract section, or 0 if absent. */
+function abstractExtraHeight(doc: HalDoc, lvl: DetailLevel): number {
+  if (lvl !== 3 || !doc.abstract_s?.[0]) return 0;
+  // Pre-estimate the number of wrapped lines
+  const maxPx = W - PAD * 4;
+  const maxChars = Math.floor(maxPx / (ABSTRACT_FS * 0.52));
+  const words = doc.abstract_s[0].split(/\s+/);
+  let lines = 1;
+  let chars = 0;
+  for (const word of words) {
+    if (chars + word.length + (chars ? 1 : 0) > maxChars) {
+      lines++;
+      chars = word.length;
+      if (lines >= ABSTRACT_MAX_LINES) break;
+    } else {
+      chars += word.length + (chars ? 1 : 0);
+    }
+  }
+  return ABSTRACT_TOP_GAP + ABSTRACT_LABEL_H + Math.min(lines, ABSTRACT_MAX_LINES) * ABSTRACT_LINE_H;
+}
 
 function cardHeight(doc: HalDoc, lvl: DetailLevel): number {
   if (lvl === 0) return 44;
@@ -107,7 +187,7 @@ function cardHeight(doc: HalDoc, lvl: DetailLevel): number {
     ((doc.keyword_s?.length ?? 0) > 0 ||
       (doc.domain_s?.length ?? 0) > 0 ||
       Boolean(doc.conferenceTitle_s));
-  return hasTagRow ? 86 : 62;
+  return (hasTagRow ? 86 : 62) + abstractExtraHeight(doc, lvl);
 }
 
 // ---------------------------------------------------------------------------
@@ -181,10 +261,12 @@ function buildCard(doc: HalDoc, lvl: DetailLevel, cardY: number): SVGElement {
   }
 
   // ── Tags row (lvl ≥ 2) ───────────────────────────────────────────────────
+  let nextSectionY = metaY + PAD;
   if (lvl >= 2) {
     let tagX = ix;
     const tagY = cardY + 68;
     const tagRight = cx + cw - PAD;
+    nextSectionY = tagY + PAD;
 
     for (const kw of (doc.keyword_s ?? [])) {
       const bw = kw.length * 11 * 0.6 + 14;
@@ -204,6 +286,27 @@ function buildCard(doc: HalDoc, lvl: DetailLevel, cardY: number): SVGElement {
     }
   }
 
+  // ── Abstract (lvl 3 only) ─────────────────────────────────────────────────
+  if (lvl === 3 && doc.abstract_s?.[0]) {
+    const absTop = nextSectionY + ABSTRACT_TOP_GAP;
+    // Separator line
+    g.appendChild(mkRect(ix, absTop - 4, cw - PAD * 2, 1, C.border));
+    // "Abstract" label
+    g.appendChild(mkText(ix, absTop + ABSTRACT_LABEL_H - 4, 'Abstract', {
+      'font-size': 11, fill: C.muted, 'font-style': 'italic',
+    }));
+    // Wrapped text
+    wrapText(
+      g,
+      ix, absTop + ABSTRACT_LABEL_H + ABSTRACT_LINE_H - 2,
+      doc.abstract_s[0],
+      cw - PAD * 2,
+      ABSTRACT_FS,
+      ABSTRACT_LINE_H,
+      C.text,
+    );
+  }
+
   return g;
 }
 
@@ -221,7 +324,7 @@ export function buildArticlesSvg(
   pagination: PaginationState,
 ): SVGSVGElement {
   const cardsH = docs.reduce((s, d) => s + cardHeight(d, lvl) + CARD_GAP, 0);
-  const totalH = HEADER_H + CARD_GAP + cardsH + 32;
+  const totalH = HEADER_H + CARD_GAP + cardsH + FOOTER_H;
 
   const svg = svgEl('svg');
   set(svg, {
@@ -257,10 +360,17 @@ export function buildArticlesSvg(
     y += cardHeight(doc, lvl) + CARD_GAP;
   }
 
-  // Footer
-  svg.appendChild(mkText(PAD, totalH - 10, pageInfo, {
+  // Footer: pagination info (left) + GitHub credit (right)
+  const footerY = totalH - FOOTER_H / 2 + 4;
+  svg.appendChild(mkText(PAD, footerY, pageInfo, {
     'font-size': 11, fill: C.muted,
   }));
+  svg.appendChild(mkLink(
+    GITHUB_URL,
+    mkText(W - PAD, footerY, 'hal-search', {
+      'font-size': 11, fill: C.muted, 'text-anchor': 'end',
+    }),
+  ));
 
   return svg;
 }
