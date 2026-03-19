@@ -16,7 +16,7 @@ export function buildUrl(
 ): string {
   const fl = resolveFields(lvl);
   const params = new URLSearchParams({
-    q: uid,
+    q: `"${uid}"`,
     wt: 'json',
     fl,
     rows: String(rows),
