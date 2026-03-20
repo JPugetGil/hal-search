@@ -82,7 +82,7 @@ The `lvl` parameter controls which HAL fields are requested and how much informa
 | `0` | Minimal | `docid`, `label_s`, `uri_s` | Citation label + link |
 | `1` | Basic *(default)* | + `title_s`, `authFullName_s`, `publicationDate_s`, `docType_s` | Title, authors, year, document type |
 | `2` | Detailed | + `keyword_s`, `domain_s`, `openAccess_bool`, `language_s`, `conferenceTitle_s` | All of the above + tags, OA badge, conference |
-| `3` | Full | `*` (all fields) | Same rendering as level 2 |
+| `3` | Full | `*` (all fields) | Adds the abstract of the paper |
 
 ### Theming
 
