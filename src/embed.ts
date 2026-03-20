@@ -31,5 +31,5 @@ export function buildEmbedSnippet(options: EmbedOptions): string {
   const src = buildEmbedUrl(options);
   const width = options.width ?? '100%';
   const height = options.height ?? '600';
-  return `<iframe src="${src}" width="${width}" height="${height}" frameborder="0" style="border:none;"></iframe>`;
+  return `<iframe src="${src}" width="${width}" height="${height}"></iframe>`;
 }
