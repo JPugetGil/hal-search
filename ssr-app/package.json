@@ -10,7 +10,7 @@
   "dependencies": {
     "hal-search": "^0.1.0",
     "jsdom": "^24.0.0",
-    "nitro": "^3.0.0"
+    "nitro": "^3.0.260311-beta"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.6",
