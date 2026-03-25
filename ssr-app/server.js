@@ -41,9 +41,11 @@ async function createServer() {
       if (output === 'svg') {
         res.status(200).set({ 'Content-Type': 'image/svg+xml' }).end(renderResult);
       } else {
-        // Assume renderResult is full HTML content (or fragment + template logic)
-        // For HTML output, we inject into the template
-        const html = template.replace(`<!--ssr-outlet-->`, renderResult);
+        // renderResult is { html, head } — inject styles into <head> and content into body
+        let html = template.replace(`<!--ssr-outlet-->`, renderResult.html);
+        if (renderResult.head) {
+          html = html.replace(`</head>`, `${renderResult.head}</head>`);
+        }
         res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
       }
     } catch (e) {

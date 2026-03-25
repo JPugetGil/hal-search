@@ -1,4 +1,4 @@
-import { DetailLevel, HalSearch } from '../../src/index.ts';
+import { DetailLevel, HalSearch } from 'hal-search';
 import { JSDOM } from 'jsdom';
 
 import { fileURLToPath } from 'node:url';
@@ -58,9 +58,10 @@ export async function render(url, query) {
        // If result is somehow not the element (e.g. void if container was used, but we didn't pass one)
        return '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="50"><rect width="100%" height="100%" fill="#eee"/><text x="10" y="30" fill="red">Error generating SVG</text></svg>';
     } else {
-      // Return HTML string from container
+      // Return HTML content and any styles injected into <head> by HalSearch
       const app = dom.window.document.getElementById('app');
-      return app ? app.innerHTML : '';
+      const head = dom.window.document.head ? dom.window.document.head.innerHTML : '';
+      return { html: app ? app.innerHTML : '', head };
     }
   } catch (err) {
     console.error("SSR Error:", err);
