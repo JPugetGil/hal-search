@@ -1,4 +1,4 @@
-import { parseParams, renderHalSearch } from '../src/render.ts';
+import { parseParams, renderHalSearch } from '../src/render';
 
 export default {
   async fetch(req: Request) {

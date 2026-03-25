@@ -1,5 +1,5 @@
 import { defineHandler } from 'nitro/h3';
-import { parseParams, renderHalSearch } from '../src/render.ts';
+import { parseParams, renderHalSearch } from '../src/render';
 
 export default defineHandler(async (event) => {
   const url = new URL(event.req.url!, `http://${event.req.headers.get('host') || 'localhost'}`);
