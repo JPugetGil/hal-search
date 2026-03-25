@@ -8,9 +8,9 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/hal-search.es.js",
-      "require": "./dist/hal-search.umd.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/hal-search.umd.js"
     }
   },
   "files": [
