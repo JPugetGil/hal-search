@@ -1,60 +1,96 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import express from 'express';
-import { createServer as createViteServer } from 'vite';
+import fs from 'node:fs/promises'
+import express from 'express'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Polyfill require for JSDOM in ESM build environments (like Vercel)
+const require = createRequire(import.meta.url)
+globalThis.require = require
 
-async function createServer() {
-  const app = express();
-  const vite = await createViteServer({
+// Constants
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const isProduction = process.env.NODE_ENV === 'production'
+const port = process.env.PORT || 5173
+const base = process.env.BASE || '/'
+
+// Cached production assets
+const templateHtml = isProduction
+  ? await fs.readFile(path.resolve(__dirname, './dist/client/index.html'), 'utf-8')
+  : ''
+
+// Create http server
+const app = express()
+
+// Add Vite or respective production middlewares
+let vite
+if (!isProduction) {
+  const { createServer } = await import('vite')
+  vite = await createServer({
     server: { middlewareMode: true },
     appType: 'custom',
-  });
-
-  app.use(vite.middlewares);
-
-  app.use('*', async (req, res, next) => {
-    const url = req.originalUrl;
-    
-    // Parse parameters
-    const params = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '');
-    const output = params.get('output') || 'html'; // 'html' or 'svg'
-
-    try {
-      // 1. Read template
-      let template = fs.readFileSync(
-        path.resolve(__dirname, 'index.html'),
-        'utf-8'
-      );
-
-      // 2. Transform template with Vite
-      template = await vite.transformIndexHtml(url, template);
-
-      // 3. Load server entry
-      const { render } = await vite.ssrLoadModule('/src/entry-server.ts');
-
-      // 4. Render app HTML
-      const renderResult = await render(url, params);
-
-      if (output === 'svg') {
-        res.status(200).set({ 'Content-Type': 'image/svg+xml' }).end(renderResult);
-      } else {
-        // Assume renderResult is full HTML content (or fragment + template logic)
-        // For HTML output, we inject into the template
-        const html = template.replace(`<!--ssr-outlet-->`, renderResult);
-        res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
-      }
-    } catch (e) {
-      vite.ssrFixStacktrace(e);
-      next(e);
-    }
-  });
-
-  app.listen(5173, () => {
-    console.log('http://localhost:5173');
-  });
+    base
+  })
+  app.use(vite.middlewares)
+} else {
+  const compression = (await import('compression')).default
+  const sirv = (await import('sirv')).default
+  app.use(compression())
+  app.use(base, sirv(path.resolve(__dirname, './dist/client'), { extensions: [] }))
 }
 
-createServer();
+// Serve HTML
+app.use(async (req, res) => {
+  try {
+    const url = req.originalUrl.replace(base, '')
+
+    let template
+    let render
+    if (!isProduction) {
+      // Always read fresh template in development
+      template = await fs.readFile(path.resolve(__dirname, './index.html'), 'utf-8')
+      template = await vite.transformIndexHtml(url, template)
+      render = (await vite.ssrLoadModule('/src/render.ts')).renderHalSearch
+    } else {
+      template = templateHtml
+      render = (await import('./dist/server/render.js')).renderHalSearch
+    }
+
+    const { parseParams } = await (isProduction 
+      ? import('./dist/server/render.js') 
+      : vite.ssrLoadModule('/src/render.ts'))
+
+    // Parse URL params
+    const searchParams = new URLSearchParams(req.url.split('?')[1])
+    const renderParams = parseParams(searchParams)
+
+    // Render the app
+    const rendered = await render(renderParams)
+
+    if (renderParams.output === 'svg' && typeof rendered === 'string') {
+      res.setHeader('Content-Type', 'image/svg+xml')
+      return res.status(200).end(rendered)
+    }
+
+    // output HTML
+    if (typeof rendered !== 'string') {
+        const html = template
+        .replace(`<!--ssr-head-->`, rendered.head ?? '')
+        .replace(`<!--ssr-outlet-->`, rendered.html ?? '')
+
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(html)
+    } else {
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(rendered)
+    }
+    
+  } catch (e) {
+    vite?.ssrFixStacktrace(e)
+    console.log(e.stack)
+    res.status(500).end(e.stack)
+  }
+})
+
+// Start http server
+app.listen(port, () => {
+  console.log(`Server started at http://localhost:${port}`)
+})
