@@ -20,7 +20,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "example": "npm run build && npx serve -l 8080 ."
+    "example": "npm run build && npx serve -l 8080 example"
   },
   "devDependencies": {
     "typescript": "^5.4.0",

@@ -54,7 +54,7 @@ dist/hal-search.umd.js  # UMD (browser global: window.HalSearch)
 
 | Option         | Type                              | Default | Description |
 |----------------|-----------------------------------|---------|-------------|
-| `container`    | `HTMLElement \| string`           | —       | Target DOM element or CSS selector (required) |
+| `container`    | `HTMLElement \| string`           | —       | Target DOM element or CSS selector (optional if output='svg') |
 | `lvl`          | `0 \| 1 \| 2 \| 3`              | `1`     | Level of detail (see below) |
 | `rows`         | `number`                          | `10`    | Results per page |
 | `apiBase`      | `string`                          | HAL URL | Override the API base URL |
@@ -66,12 +66,27 @@ dist/hal-search.umd.js  # UMD (browser global: window.HalSearch)
 
 | Method | Description |
 |--------|-------------|
-| `search({ uid, rows?, start? })` | Start a new search, reset to page 1 |
-| `setLevel(lvl)` | Change detail level and re-fetch |
-| `goToPage(n)` | Jump to page `n` (1-based) |
-| `nextPage()` | Go to the next page |
-| `prevPage()` | Go to the previous page |
-| `destroy()` | Clear the container |
+| `search({ uid, rows?, start? })` | Start a new search. Returns `Promise<SVGSVGElement>` if headless SVG mode. |
+| `setLevel(lvl)` | Change detail level and re-fetch. Returns `Promise<SVGSVGElement>` if headless SVG mode. |
+| `goToPage(n)` | Jump to page `n` (1-based). Returns `Promise<SVGSVGElement>` if headless SVG mode. |
+| `nextPage()` | Go to the next page. Returns `Promise<SVGSVGElement>` if headless SVG mode. |
+| `prevPage()` | Go to the previous page. Returns `Promise<SVGSVGElement>` if headless SVG mode. |
+| `destroy()` | Clear the container (if one was provided) |
+
+### Headless SVG generation
+
+You can generate a standalone SVG without attaching it to the DOM by omitting the `container` option and setting `output: 'svg'`. The `search()` method (and pagination methods) will resolve with the SVG element.
+
+```js
+const hs = new HalSearch({
+  output: 'svg',
+  lvl: 2,
+  rows: 5,
+});
+
+const svgElement = await hs.search({ uid: 'authIdHal_s:jdupont' });
+document.body.appendChild(svgElement);
+```
 
 ### Detail levels
 

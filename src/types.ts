@@ -50,7 +50,7 @@ export interface HalApiResponse {
 /** Options passed to the HalSearch constructor */
 export interface HalSearchOptions {
   /** DOM element or CSS selector for the render target */
-  container: HTMLElement | string;
+  container?: HTMLElement | string;
   /** HAL API base URL — override for proxies/testing. Default: HAL production */
   apiBase?: string;
   /** Level of detail: 0=minimal, 1=basic, 2=detailed, 3=full. Default: 1 */
