@@ -1,6 +1,6 @@
 {
   "name": "hal-search-ssr",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "node server.js",
@@ -10,7 +10,7 @@
   "dependencies": {
     "compression": "^1.8.1",
     "express": "^5.2.1",
-    "hal-search": "^0.1.0",
+    "hal-search": "^0.2.0",
     "jsdom": "^24.0.0",
     "sirv": "^3.0.2"
   },

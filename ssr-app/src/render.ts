@@ -6,6 +6,9 @@ export interface RenderParams {
   lvl: DetailLevel;
   rows: number;
   output: 'html' | 'svg';
+  backgroundColor?: string;
+  textColor?: string;
+  mainColor?: string;
 }
 
 export function parseParams(searchParams: URLSearchParams): RenderParams {
@@ -15,6 +18,9 @@ export function parseParams(searchParams: URLSearchParams): RenderParams {
     lvl: ([0, 1, 2, 3].includes(lvl) ? lvl : 1) as DetailLevel,
     rows: parseInt(searchParams.get('rows') || '10', 10),
     output: searchParams.get('output') === 'svg' ? 'svg' : 'html',
+    backgroundColor: searchParams.get('bg') || undefined,
+    textColor: searchParams.get('text') || undefined,
+    mainColor: searchParams.get('main') || undefined,
   };
 }
 
@@ -49,6 +55,9 @@ export async function renderHalSearch(
       rows: params.rows,
       output: params.output,
       container: params.output === 'html' ? '#app' : undefined,
+      backgroundColor: params.backgroundColor,
+      textColor: params.textColor,
+      mainColor: params.mainColor,
     });
 
     const result = await hs.search({ uid: params.uid });
