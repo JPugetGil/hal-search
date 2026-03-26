@@ -18,7 +18,7 @@ A zero-dependency TypeScript library for querying and displaying articles from t
 ## Installation
 
 ```bash
-# from npm (once published)
+# from npm
 npm install hal-search
 
 # or use the built files directly
@@ -105,18 +105,30 @@ The `lvl` parameter controls which HAL fields are requested and how much informa
 
 ### Color customization
 
-You can set the three main colors directly via constructor options:
+Three color options let you control the look of hal-search without writing CSS:
+
+| Option | CSS variable | What it affects |
+|--------|-------------|-----------------|
+| `backgroundColor` | `--hal-bg` | Article card backgrounds (HTML), card fill (SVG) |
+| `textColor` | `--hal-text` | Body text, author names, abstracts (HTML & SVG) |
+| `mainColor` | `--hal-accent` | Links, title hover color, pagination buttons, header bar (HTML & SVG) |
+
+These options work in all rendering modes: HTML cards, inline SVG, headless SVG, and server-side rendering (SSR).
+
+#### Via constructor
 
 ```js
 const hs = new HalSearch({
   container: '#publications',
-  backgroundColor: '#1a1a2e',  // dark background
+  backgroundColor: '#1a1a2e',  // dark card background
   textColor:       '#e0e0e0',  // light text
   mainColor:       '#e63946',  // red accent
 });
 ```
 
-Colors can also be changed at runtime without re-fetching:
+#### At runtime
+
+Update colors at any time without re-fetching — the change is applied immediately to the existing results:
 
 ```js
 hs.setColors({
@@ -124,6 +136,40 @@ hs.setColors({
   textColor:       '#1a1a1a',
   mainColor:       '#0052cc',
 });
+```
+
+You can update a single color and leave the others unchanged:
+
+```js
+hs.setColors({ mainColor: '#16a34a' }); // only change the accent
+```
+
+#### Via URL query parameters (embed & SSR)
+
+When using the embed page or the SSR app, pass colors as URL parameters:
+
+| Parameter | Maps to |
+|-----------|---------|
+| `bg`      | `backgroundColor` |
+| `text`    | `textColor` |
+| `main`    | `mainColor` |
+
+Values must be URL-encoded (`#` becomes `%23`).
+
+**Embed example:**
+
+```html
+<iframe
+  src="embed.html?uid=jpugetgil&lvl=2&rows=5&bg=%231a1a2e&text=%23e0e0e0&main=%23e63946"
+  width="100%" height="600" frameborder="0" style="border:none;">
+</iframe>
+```
+
+**SSR example:**
+
+```
+GET /?uid=jpugetgil&output=html&bg=%231a1a2e&text=%23e0e0e0&main=%23e63946
+GET /?uid=jpugetgil&output=svg&bg=%231a1a2e&text=%23e0e0e0&main=%23e63946
 ```
 
 ### Theming
