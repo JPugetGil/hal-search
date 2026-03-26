@@ -50,14 +50,24 @@ export async function renderHalSearch(
   }
 
   try {
+    // Inject color overrides as a <style> tag so they survive innerHTML extraction
+    const colorOverrides: string[] = [];
+    if (params.backgroundColor) colorOverrides.push(`--hal-bg: ${params.backgroundColor};`);
+    if (params.textColor) colorOverrides.push(`--hal-text: ${params.textColor};`);
+    if (params.mainColor) colorOverrides.push(`--hal-accent: ${params.mainColor};`);
+
+    if (colorOverrides.length > 0) {
+      const style = dom.window.document.createElement('style');
+      style.id = 'hal-search-color-overrides';
+      style.textContent = `#app { ${colorOverrides.join(' ')} }`;
+      dom.window.document.head.appendChild(style);
+    }
+
     const hs = new HalSearch({
       lvl: params.lvl,
       rows: params.rows,
       output: params.output,
       container: params.output === 'html' ? '#app' : undefined,
-      backgroundColor: params.backgroundColor,
-      textColor: params.textColor,
-      mainColor: params.mainColor,
     });
 
     const result = await hs.search({ uid: params.uid });
