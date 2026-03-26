@@ -3,7 +3,7 @@ export { buildUrl, fetchArticles, DEFAULT_BASE } from './api';
 export { LEVEL_FIELDS, LEVEL_NAMES, resolveFields } from './levels';
 export { DEFAULT_CSS, injectDefaultStyles } from './styles';
 export { buildEmbedUrl, buildEmbedSnippet } from './embed';
-export { buildArticlesSvg, renderResultsSvg } from './svg-renderer';
+export { buildArticlesSvg, renderResultsSvg, resolvePalette } from './svg-renderer';
 export type {
   HalSearchOptions,
   HalDoc,
@@ -14,5 +14,6 @@ export type {
   LevelName,
   SearchParams,
   PaginationState,
+  SvgColorOverrides,
 } from './types';
 export type { EmbedOptions } from './embed';

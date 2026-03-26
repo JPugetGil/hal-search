@@ -6,6 +6,9 @@ export interface RenderParams {
   lvl: DetailLevel;
   rows: number;
   output: 'html' | 'svg';
+  backgroundColor?: string;
+  textColor?: string;
+  mainColor?: string;
 }
 
 export function parseParams(searchParams: URLSearchParams): RenderParams {
@@ -15,6 +18,9 @@ export function parseParams(searchParams: URLSearchParams): RenderParams {
     lvl: ([0, 1, 2, 3].includes(lvl) ? lvl : 1) as DetailLevel,
     rows: parseInt(searchParams.get('rows') || '10', 10),
     output: searchParams.get('output') === 'svg' ? 'svg' : 'html',
+    backgroundColor: searchParams.get('bg') || undefined,
+    textColor: searchParams.get('text') || undefined,
+    mainColor: searchParams.get('main') || undefined,
   };
 }
 
@@ -44,6 +50,19 @@ export async function renderHalSearch(
   }
 
   try {
+    // Inject color overrides as a <style> tag so they survive innerHTML extraction
+    const colorOverrides: string[] = [];
+    if (params.backgroundColor) colorOverrides.push(`--hal-bg: ${params.backgroundColor};`);
+    if (params.textColor) colorOverrides.push(`--hal-text: ${params.textColor};`);
+    if (params.mainColor) colorOverrides.push(`--hal-accent: ${params.mainColor};`);
+
+    if (colorOverrides.length > 0) {
+      const style = dom.window.document.createElement('style');
+      style.id = 'hal-search-color-overrides';
+      style.textContent = `#app { ${colorOverrides.join(' ')} }`;
+      dom.window.document.head.appendChild(style);
+    }
+
     const hs = new HalSearch({
       lvl: params.lvl,
       rows: params.rows,

@@ -4,6 +4,7 @@ import type {
   PaginationState,
   HalApiResponse,
   DetailLevel,
+  SvgColorOverrides,
 } from './types';
 import { fetchArticles, DEFAULT_BASE } from './api';
 import { renderResults, renderLoading, renderError } from './renderer';
@@ -26,6 +27,7 @@ export class HalSearch {
   };
   private pagination: PaginationState;
   private currentUid: string = '';
+  private colorOverrides: SvgColorOverrides = {};
 
   constructor(options: HalSearchOptions) {
     if (options.container) {
@@ -53,7 +55,12 @@ export class HalSearch {
       injectDefaultStyles();
     }
 
-    this._applyColors(options);
+    this.colorOverrides = {
+      backgroundColor: options.backgroundColor,
+      textColor: options.textColor,
+      mainColor: options.mainColor,
+    };
+    this._applyColors(this.colorOverrides);
   }
 
   // ---------------------------------------------------------------------------
@@ -99,6 +106,7 @@ export class HalSearch {
 
   /** Update the color theme at runtime. Only provided colors are changed. */
   setColors(colors: { backgroundColor?: string; textColor?: string; mainColor?: string }): void {
+    this.colorOverrides = { ...this.colorOverrides, ...colors };
     this._applyColors(colors);
   }
 
@@ -151,12 +159,14 @@ export class HalSearch {
             response.response.docs,
             this.options.lvl,
             this.pagination,
+            this.colorOverrides,
           );
         } else {
           const svg = buildArticlesSvg(
             response.response.docs,
             this.options.lvl,
             this.pagination,
+            this.colorOverrides,
           );
           this.options.onResults?.(response);
           return svg;

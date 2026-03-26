@@ -1,4 +1,4 @@
-import type { HalDoc, DetailLevel, PaginationState } from './types';
+import type { HalDoc, DetailLevel, PaginationState, SvgColorOverrides } from './types';
 
 const NS = 'http://www.w3.org/2000/svg';
 const W = 800;
@@ -9,7 +9,7 @@ const FOOTER_H = 28;
 const GITHUB_URL = 'https://github.com/JPugetGil/hal-search';
 
 /** Default colour palette — mirrors CSS-variable defaults from styles.ts */
-const C = {
+const DEFAULT_C = {
   accent: '#0052cc',
   accentText: '#ffffff',
   bg: '#f2f4f8',
@@ -25,6 +25,18 @@ const C = {
   domainBg: '#dbeafe',
   domainColor: '#1a56db',
 };
+
+type Palette = typeof DEFAULT_C;
+
+export function resolvePalette(overrides?: SvgColorOverrides): Palette {
+  if (!overrides) return DEFAULT_C;
+  return {
+    ...DEFAULT_C,
+    ...(overrides.backgroundColor && { bg: overrides.backgroundColor, cardBg: overrides.backgroundColor }),
+    ...(overrides.textColor && { text: overrides.textColor, muted: overrides.textColor }),
+    ...(overrides.mainColor && { accent: overrides.mainColor, link: overrides.mainColor }),
+  };
+}
 
 // Abstract rendering constants
 const ABSTRACT_FS = 11;
@@ -194,7 +206,7 @@ function cardHeight(doc: HalDoc, lvl: DetailLevel): number {
 // Card builder
 // ---------------------------------------------------------------------------
 
-function buildCard(doc: HalDoc, lvl: DetailLevel, cardY: number): SVGElement {
+function buildCard(doc: HalDoc, lvl: DetailLevel, cardY: number, C: Palette): SVGElement {
   const g = svgEl('g');
   const h = cardHeight(doc, lvl);
   const cx = PAD;
@@ -322,7 +334,9 @@ export function buildArticlesSvg(
   docs: HalDoc[],
   lvl: DetailLevel,
   pagination: PaginationState,
+  colors?: SvgColorOverrides,
 ): SVGSVGElement {
+  const C = resolvePalette(colors);
   const cardsH = docs.reduce((s, d) => s + cardHeight(d, lvl) + CARD_GAP, 0);
   const totalH = HEADER_H + CARD_GAP + cardsH + FOOTER_H;
 
@@ -356,7 +370,7 @@ export function buildArticlesSvg(
   // Article cards
   let y = HEADER_H + CARD_GAP;
   for (const doc of docs) {
-    svg.appendChild(buildCard(doc, lvl, y));
+    svg.appendChild(buildCard(doc, lvl, y, C));
     y += cardHeight(doc, lvl) + CARD_GAP;
   }
 
@@ -384,6 +398,7 @@ export function renderResultsSvg(
   docs: HalDoc[],
   lvl: DetailLevel,
   pagination: PaginationState,
+  colors?: SvgColorOverrides,
 ): void {
   container.innerHTML = '';
   if (docs.length === 0) {
@@ -393,5 +408,5 @@ export function renderResultsSvg(
     container.appendChild(p);
     return;
   }
-  container.appendChild(buildArticlesSvg(docs, lvl, pagination));
+  container.appendChild(buildArticlesSvg(docs, lvl, pagination, colors));
 }

@@ -80,6 +80,16 @@ export interface SearchParams {
   start?: number;
 }
 
+/** Color overrides for the SVG renderer */
+export interface SvgColorOverrides {
+  /** Background color (maps to C.bg / C.cardBg) */
+  backgroundColor?: string;
+  /** Text color (maps to C.text) */
+  textColor?: string;
+  /** Main accent color (maps to C.accent / C.link) */
+  mainColor?: string;
+}
+
 /** Internal pagination state */
 export interface PaginationState {
   currentPage: number;
