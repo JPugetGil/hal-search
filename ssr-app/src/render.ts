@@ -68,6 +68,9 @@ export async function renderHalSearch(
       rows: params.rows,
       output: params.output,
       container: params.output === 'html' ? '#app' : undefined,
+      backgroundColor: params.backgroundColor,
+      textColor: params.textColor,
+      mainColor: params.mainColor,
     });
 
     const result = await hs.search({ uid: params.uid });
