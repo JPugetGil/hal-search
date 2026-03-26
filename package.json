@@ -1,6 +1,6 @@
 {
   "name": "hal-search",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A library to display article descriptions fetched from the HAL Open Archive API",
   "type": "module",
   "main": "./dist/hal-search.umd.js",

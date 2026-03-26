@@ -20,7 +20,7 @@ const DEFAULTS = {
 
 export class HalSearch {
   private readonly container?: HTMLElement;
-  private options: Required<Omit<HalSearchOptions, 'container' | 'onResults' | 'onError'>> & {
+  private options: Required<Omit<HalSearchOptions, 'container' | 'onResults' | 'onError' | 'backgroundColor' | 'textColor' | 'mainColor'>> & {
     onResults?: HalSearchOptions['onResults'];
     onError?: HalSearchOptions['onError'];
   };
@@ -52,6 +52,8 @@ export class HalSearch {
     if (this.options.injectStyles) {
       injectDefaultStyles();
     }
+
+    this._applyColors(options);
   }
 
   // ---------------------------------------------------------------------------
@@ -95,6 +97,11 @@ export class HalSearch {
     return this._fetch(this.currentUid, this.pagination.start);
   }
 
+  /** Update the color theme at runtime. Only provided colors are changed. */
+  setColors(colors: { backgroundColor?: string; textColor?: string; mainColor?: string }): void {
+    this._applyColors(colors);
+  }
+
   /** Clear the container and remove rendered content. */
   destroy(): void {
     if (this.container) {
@@ -105,6 +112,19 @@ export class HalSearch {
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
+
+  private _applyColors(colors: { backgroundColor?: string; textColor?: string; mainColor?: string }): void {
+    if (!this.container) return;
+    if (colors.backgroundColor) {
+      this.container.style.setProperty('--hal-bg', colors.backgroundColor);
+    }
+    if (colors.textColor) {
+      this.container.style.setProperty('--hal-text', colors.textColor);
+    }
+    if (colors.mainColor) {
+      this.container.style.setProperty('--hal-accent', colors.mainColor);
+    }
+  }
 
   private async _fetch(uid: string, start: number): Promise<SVGSVGElement | void> {
     if (!uid) return;

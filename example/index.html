@@ -73,6 +73,34 @@
         font-weight: 500;
       }
 
+      .sidebar input[type="color"] {
+        width: 40px;
+        height: 32px;
+        padding: 2px;
+        border: 1px solid #d0d4da;
+        border-radius: 6px;
+        cursor: pointer;
+        background: #fafafa;
+      }
+
+      .color-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .color-row label {
+        flex: 1;
+        font-size: 0.82rem;
+      }
+
+      .color-hex {
+        font-family: monospace;
+        font-size: 0.78rem;
+        color: #888;
+        min-width: 60px;
+      }
+
       .sidebar input[type="text"],
       .sidebar input[type="number"],
       .sidebar select {
@@ -290,6 +318,25 @@
         </section>
 
         <section>
+          <h2>Colors</h2>
+          <div class="color-row">
+            <label>Background</label>
+            <input type="color" id="color-bg" value="#ffffff" />
+            <span class="color-hex" id="color-bg-hex">#ffffff</span>
+          </div>
+          <div class="color-row">
+            <label>Text</label>
+            <input type="color" id="color-text" value="#1a1a1a" />
+            <span class="color-hex" id="color-text-hex">#1a1a1a</span>
+          </div>
+          <div class="color-row">
+            <label>Main (accent)</label>
+            <input type="color" id="color-main" value="#0052cc" />
+            <span class="color-hex" id="color-main-hex">#0052cc</span>
+          </div>
+        </section>
+
+        <section>
           <h2>Embed</h2>
           <button class="embed-toggle" id="embed-toggle">Show embed code</button>
         </section>
@@ -343,8 +390,14 @@
         const uid  = document.getElementById('uid-input').value.trim();
         const lvl  = document.getElementById('lvl-select').value;
         const rows = document.getElementById('rows-input').value;
+        const bg   = colorBg.value;
+        const text = colorText.value;
+        const main = colorMain.value;
         const base = window.location.href.replace(/\/[^/]*$/, '');
-        const embedUrl = `${base}/embed.html?uid=${encodeURIComponent(uid)}&lvl=${lvl}&rows=${rows}`;
+        let embedUrl = `${base}/embed.html?uid=${encodeURIComponent(uid)}&lvl=${lvl}&rows=${rows}`;
+        if (bg !== '#ffffff')   embedUrl += `&bg=${encodeURIComponent(bg)}`;
+        if (text !== '#1a1a1a') embedUrl += `&text=${encodeURIComponent(text)}`;
+        if (main !== '#0052cc') embedUrl += `&main=${encodeURIComponent(main)}`;
         const snippet = `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" style="border:none;"></iframe>`;
         embedCode.textContent = snippet;
         embedIframe.src = embedUrl;
@@ -363,6 +416,26 @@
           setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
         });
       });
+
+      // ── Color pickers ──────────────────────────
+      const colorBg   = document.getElementById('color-bg');
+      const colorText = document.getElementById('color-text');
+      const colorMain = document.getElementById('color-main');
+
+      function onColorChange() {
+        document.getElementById('color-bg-hex').textContent = colorBg.value;
+        document.getElementById('color-text-hex').textContent = colorText.value;
+        document.getElementById('color-main-hex').textContent = colorMain.value;
+        hs.setColors({
+          backgroundColor: colorBg.value,
+          textColor: colorText.value,
+          mainColor: colorMain.value,
+        });
+      }
+
+      colorBg.addEventListener('input', onColorChange);
+      colorText.addEventListener('input', onColorChange);
+      colorMain.addEventListener('input', onColorChange);
 
       // ── Init HalSearch ─────────────────────────
       const hs = new HalSearch({
