@@ -54,13 +54,16 @@ dist/hal-search.umd.js  # UMD (browser global: window.HalSearch)
 
 | Option         | Type                              | Default | Description |
 |----------------|-----------------------------------|---------|-------------|
-| `container`    | `HTMLElement \| string`           | —       | Target DOM element or CSS selector (optional if output='svg') |
-| `lvl`          | `0 \| 1 \| 2 \| 3`              | `1`     | Level of detail (see below) |
-| `rows`         | `number`                          | `10`    | Results per page |
-| `apiBase`      | `string`                          | HAL URL | Override the API base URL |
-| `injectStyles` | `boolean`                         | `true`  | Auto-inject the default stylesheet |
-| `onResults`    | `(res: HalApiResponse) => void`   | —       | Called on every successful fetch |
-| `onError`      | `(err: Error) => void`            | —       | Called when the fetch fails |
+| `container`       | `HTMLElement \| string`           | —         | Target DOM element or CSS selector (optional if output='svg') |
+| `lvl`             | `0 \| 1 \| 2 \| 3`              | `1`       | Level of detail (see below) |
+| `rows`            | `number`                          | `10`      | Results per page |
+| `apiBase`         | `string`                          | HAL URL   | Override the API base URL |
+| `injectStyles`    | `boolean`                         | `true`    | Auto-inject the default stylesheet |
+| `backgroundColor` | `string`                          | `#ffffff` | Background color for article cards (sets `--hal-bg`) |
+| `textColor`       | `string`                          | `#1a1a1a` | Text color for article content (sets `--hal-text`) |
+| `mainColor`       | `string`                          | `#0052cc` | Accent color for links, buttons, and highlights (sets `--hal-accent`) |
+| `onResults`       | `(res: HalApiResponse) => void`   | —         | Called on every successful fetch |
+| `onError`         | `(err: Error) => void`            | —         | Called when the fetch fails |
 
 ### Methods
 
@@ -71,6 +74,7 @@ dist/hal-search.umd.js  # UMD (browser global: window.HalSearch)
 | `goToPage(n)` | Jump to page `n` (1-based). Returns `Promise<SVGSVGElement>` if headless SVG mode. |
 | `nextPage()` | Go to the next page. Returns `Promise<SVGSVGElement>` if headless SVG mode. |
 | `prevPage()` | Go to the previous page. Returns `Promise<SVGSVGElement>` if headless SVG mode. |
+| `setColors({ backgroundColor?, textColor?, mainColor? })` | Update colors at runtime. Only provided colors are changed. |
 | `destroy()` | Clear the container (if one was provided) |
 
 ### Headless SVG generation
@@ -99,9 +103,32 @@ The `lvl` parameter controls which HAL fields are requested and how much informa
 | `2` | Detailed | + `keyword_s`, `domain_s`, `openAccess_bool`, `language_s`, `conferenceTitle_s` | All of the above + tags, OA badge, conference |
 | `3` | Full | `*` (all fields) | Adds the abstract of the paper |
 
+### Color customization
+
+You can set the three main colors directly via constructor options:
+
+```js
+const hs = new HalSearch({
+  container: '#publications',
+  backgroundColor: '#1a1a2e',  // dark background
+  textColor:       '#e0e0e0',  // light text
+  mainColor:       '#e63946',  // red accent
+});
+```
+
+Colors can also be changed at runtime without re-fetching:
+
+```js
+hs.setColors({
+  backgroundColor: '#ffffff',
+  textColor:       '#1a1a1a',
+  mainColor:       '#0052cc',
+});
+```
+
 ### Theming
 
-Default styles use CSS custom properties. Override any of them on the container or globally:
+For finer control, default styles use CSS custom properties. Override any of them on the container or globally:
 
 ```css
 #publications {

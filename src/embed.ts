@@ -15,6 +15,12 @@ export interface EmbedOptions {
   width?: string;
   /** iframe height (CSS value) */
   height?: string;
+  /** Background color for article cards */
+  backgroundColor?: string;
+  /** Text color for article content */
+  textColor?: string;
+  /** Main accent color for links and buttons */
+  mainColor?: string;
 }
 
 /** Builds the URL for the embeddable page with query parameters. */
@@ -23,6 +29,9 @@ export function buildEmbedUrl(options: EmbedOptions): string {
   if (options.lvl !== undefined) params.set('lvl', String(options.lvl));
   if (options.rows !== undefined) params.set('rows', String(options.rows));
   if (options.type) params.set('type', options.type);
+  if (options.backgroundColor) params.set('bg', options.backgroundColor);
+  if (options.textColor) params.set('text', options.textColor);
+  if (options.mainColor) params.set('main', options.mainColor);
   return `${options.embedBase}/embed.html?${params.toString()}`;
 }
 

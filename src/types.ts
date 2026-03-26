@@ -61,6 +61,12 @@ export interface HalSearchOptions {
   injectStyles?: boolean;
   /** Render the article list as HTML cards or as an inline SVG. Default: 'html' */
   output?: 'html' | 'svg';
+  /** Background color for article cards (sets --hal-bg). Example: '#1a1a2e' */
+  backgroundColor?: string;
+  /** Text color for article content (sets --hal-text). Example: '#e0e0e0' */
+  textColor?: string;
+  /** Main accent color for links, buttons, and highlights (sets --hal-accent). Example: '#e63946' */
+  mainColor?: string;
   /** Called after each successful fetch */
   onResults?: (response: HalApiResponse) => void;
   /** Called on fetch error */

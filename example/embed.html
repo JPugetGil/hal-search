@@ -26,11 +26,18 @@
       const rows   = Math.min(50, Math.max(1, parseInt(params.get('rows') || '10', 10)));
       const type   = params.get('type') === 'svg' ? 'svg' : 'html';
 
+      const bg   = params.get('bg')   || undefined;
+      const text = params.get('text') || undefined;
+      const main = params.get('main') || undefined;
+
       const hs = new HalSearch({
         container: '#hal-embed',
         lvl,
         rows,
         output: type,
+        backgroundColor: bg,
+        textColor: text,
+        mainColor: main,
       });
 
       hs.search({ uid });

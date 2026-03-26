@@ -46,6 +46,25 @@
       }
       .controls button:hover { background: #003d99; }
       label { font-size: 0.85rem; color: #555; }
+      .color-controls {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .color-controls label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .color-controls input[type="color"] {
+        width: 32px;
+        height: 32px;
+        padding: 2px;
+        border: 1px solid #d0d0d0;
+        border-radius: 6px;
+        cursor: pointer;
+      }
       #results { margin-top: 1rem; }
     </style>
   </head>
@@ -78,6 +97,21 @@
       <button id="search-btn">Search</button>
     </div>
 
+    <div class="color-controls" style="margin-bottom: 1rem;">
+      <label>
+        Background
+        <input type="color" id="color-bg" value="#ffffff" />
+      </label>
+      <label>
+        Text
+        <input type="color" id="color-text" value="#1a1a1a" />
+      </label>
+      <label>
+        Main color
+        <input type="color" id="color-main" value="#0052cc" />
+      </label>
+    </div>
+
     <div id="results"></div>
 
     <script type="module">
@@ -93,6 +127,17 @@
         onError: (err) => {
           console.error('[hal-search] error:', err.message);
         },
+      });
+
+      // ── Color pickers ──
+      document.getElementById('color-bg').addEventListener('input', (e) => {
+        hs.setColors({ backgroundColor: e.target.value });
+      });
+      document.getElementById('color-text').addEventListener('input', (e) => {
+        hs.setColors({ textColor: e.target.value });
+      });
+      document.getElementById('color-main').addEventListener('input', (e) => {
+        hs.setColors({ mainColor: e.target.value });
       });
 
       document.getElementById('search-btn').addEventListener('click', () => {
