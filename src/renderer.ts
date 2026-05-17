@@ -1,4 +1,5 @@
 import type { HalDoc, DetailLevel, PaginationState } from './types';
+import { normalizeDomains } from './levels';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,7 +142,7 @@ function buildArticleCard(doc: HalDoc, lvl: DetailLevel): HTMLElement {
 
       if (hasDomains) {
         const domainsWrap = el('div', 'hal-article__tags');
-        for (const domain of doc.domain_s!) {
+        for (const domain of normalizeDomains(doc.domain_s!, doc.en_domainAllCodeLabel_fs)) {
           const tag = el('span', 'hal-tag hal-tag--domain');
           tag.textContent = domain;
           domainsWrap.appendChild(tag);

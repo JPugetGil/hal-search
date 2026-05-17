@@ -17,6 +17,7 @@ export interface HalDoc {
   openAccess_bool?: boolean;
   keyword_s?: string[];
   domain_s?: string[];
+  en_domainAllCodeLabel_fs?: string[];
   language_s?: string[];
   peerReviewing_s?: string;
   conferenceTitle_s?: string;

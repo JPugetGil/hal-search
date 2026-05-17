@@ -1,4 +1,5 @@
 import type { HalDoc, DetailLevel, PaginationState, SvgColorOverrides } from './types';
+import { normalizeDomains } from './levels';
 
 const NS = 'http://www.w3.org/2000/svg';
 const W = 800;
@@ -285,7 +286,7 @@ function buildCard(doc: HalDoc, lvl: DetailLevel, cardY: number, C: Palette): SV
       if (tagX + bw > tagRight) break;
       tagX += pill(g, tagX, tagY, kw, C.tagBg, C.tagColor);
     }
-    for (const domain of (doc.domain_s ?? [])) {
+    for (const domain of normalizeDomains(doc.domain_s ?? [], doc.en_domainAllCodeLabel_fs)) {
       const bw = domain.length * 11 * 0.6 + 14;
       if (tagX + bw > tagRight) break;
       tagX += pill(g, tagX, tagY, domain, C.domainBg, C.domainColor);
