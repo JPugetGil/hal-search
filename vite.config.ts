@@ -11,8 +11,10 @@ export default defineConfig({
       formats: ['es', 'umd', 'cjs'],
       fileName: (format) => (format === 'cjs' ? 'hal-search.cjs' : `hal-search.${format}.js`),
     },
-    rollupOptions: {
-      external: [],
+    rolldownOptions: {
+      // Vite leaves whitespace in ES library output to protect /* @__PURE__ */ annotations; Rolldown keeps
+      // them while minifying (output.comments.annotation), so the ES file is minified like the others.
+      output: { minify: true },
     },
     // Maps stay in dist/ for local debugging but are not published (package.json "files"): no sourceMappingURL.
     sourcemap: 'hidden',
