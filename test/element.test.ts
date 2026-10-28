@@ -22,6 +22,9 @@ vi.mock('../src/renderer', () => ({
   renderResults: vi.fn((c: HTMLElement, docs: HalDoc[]) => {
     c.textContent = `results:${docs.map((d) => d.docid).join(',')}`;
   }),
+  renderMissingQuery: vi.fn((c: HTMLElement) => {
+    c.textContent = 'missing';
+  }),
 }));
 
 vi.mock('../src/styles', () => ({ injectDefaultStyles: vi.fn() }));

@@ -26,6 +26,10 @@ vi.mock('../src/renderer', () => ({
     c.textContent = `results:${docs.map((d) => d.docid).join(',')}`;
     c.removeAttribute('aria-busy');
   }),
+  renderMissingQuery: vi.fn((c: HTMLElement, labels: { missingQuery: string }) => {
+    c.textContent = `missing:${labels.missingQuery}`;
+    c.removeAttribute('aria-busy');
+  }),
 }));
 
 vi.mock('../src/styles', () => ({ injectDefaultStyles: vi.fn() }));
@@ -37,10 +41,19 @@ vi.mock('../src/svg', () => ({
   ),
 }));
 
-vi.mock('../src/query', () => ({ buildHalWebUrl: vi.fn(() => 'https://hal.science/search/index/?q=x') }));
+vi.mock('../src/query', async (importOriginal) => {
+  // The real criterion rule (shared with the element and the SSR), a fake web URL.
+  const { buildSolrQuery, hasQueryCriterion } = await importOriginal<typeof import('../src/query')>();
+  return { buildSolrQuery, hasQueryCriterion, buildHalWebUrl: vi.fn(() => 'https://hal.science/search/index/?q=x') };
+});
 
 vi.mock('../src/labels', () => ({
-  resolveLabels: (o?: Record<string, unknown>) => ({ loading: 'Loading…', error: 'Error: {message}', ...o }),
+  resolveLabels: (o?: Record<string, unknown>) => ({
+    loading: 'Loading…',
+    error: 'Error: {message}',
+    missingQuery: 'No search criterion given.',
+    ...o,
+  }),
 }));
 
 vi.mock('../src/theme', () => {
@@ -62,7 +75,7 @@ vi.mock('../src/theme', () => {
 
 import { HalSearch } from '../src/HalSearch';
 import { fetchArticles } from '../src/api';
-import { renderError, renderLoading, renderResults } from '../src/renderer';
+import { renderError, renderLoading, renderMissingQuery, renderResults } from '../src/renderer';
 import { renderSvg } from '../src/svg';
 import { injectDefaultStyles } from '../src/styles';
 import { buildHalWebUrl } from '../src/query';
@@ -353,6 +366,95 @@ describe('HalSearch.search', () => {
     await expect(p).resolves.toBeUndefined();
     expect(container.textContent).toBe('error:HTTP 500');
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'HTTP 500' }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Query without criterion (never q=*:*)
+// ---------------------------------------------------------------------------
+
+describe('HalSearch without a search criterion', () => {
+  it.each([
+    ['an empty object', {}],
+    ['blank fields', { idHal: '  ', text: '', orcid: ' ' }],
+    ['a text made only of Solr syntax', { text: '***' }],
+    ['an empty string', '  '],
+  ])('sends no request for %s and renders labels.missingQuery', async (_name, query) => {
+    controlFetch();
+    const onResults = vi.fn();
+    const onError = vi.fn();
+    const hs = new HalSearch({ container, onResults, onError, labels: { missingQuery: 'Nothing to show' } });
+    await expect(hs.search({ query })).resolves.toBeUndefined();
+
+    expect(fetchArticles).not.toHaveBeenCalled();
+    expect(renderLoading).not.toHaveBeenCalled();
+    expect(renderMissingQuery).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(renderMissingQuery).mock.calls[0][0]).toBe(container);
+    expect(container.textContent).toBe('missing:Nothing to show');
+    expect(container.hasAttribute('aria-busy')).toBe(false);
+    expect(onResults).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+    expect(hs.state).toMatchObject({ query, page: 1, totalFound: 0 });
+  });
+
+  it('also covers a JS caller that omits the query', async () => {
+    controlFetch();
+    const hs = new HalSearch({ container });
+    await expect(hs.search({} as never)).resolves.toBeUndefined();
+    expect(fetchArticles).not.toHaveBeenCalled();
+    expect(container.textContent).toBe('missing:No search criterion given.');
+    expect(hs.state.query).toEqual({});
+  });
+
+  it('aborts the request in flight and ignores its late response', async () => {
+    const calls = controlFetch({ honorAbort: false });
+    const hs = new HalSearch({ container });
+    const first = hs.search({ query: { idHal: 'x' } });
+    const second = hs.search({ query: { text: '?' } });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].params.signal?.aborted).toBe(true);
+
+    calls[0].resolve(reply(['late'], 1));
+    await expect(first).resolves.toBeUndefined();
+    await expect(second).resolves.toBeUndefined();
+    expect(renderResults).not.toHaveBeenCalled();
+    expect(container.textContent).toBe('missing:No search criterion given.');
+  });
+
+  it('page and level changes stay without a request', async () => {
+    controlFetch();
+    const hs = new HalSearch({ container, output: 'svg' });
+    await hs.search({ query: {}, page: 3 });
+    await expect(hs.nextPage()).resolves.toBeUndefined();
+    await expect(hs.goToPage(5)).resolves.toBeUndefined();
+    await expect(hs.setLevel(2)).resolves.toBeUndefined();
+    hs.setColors({ mainColor: '#123456' });
+    expect(fetchArticles).not.toHaveBeenCalled();
+    expect(renderSvg).not.toHaveBeenCalled();
+    expect(renderMissingQuery).toHaveBeenCalledTimes(4);
+    expect(hs.state.page).toBe(1);
+  });
+
+  it('still sends an explicit raw Solr query, and a query with any criterion', async () => {
+    const calls = controlFetch();
+    const hs = new HalSearch({ container });
+    void hs.search({ query: '*:*' });
+    void hs.search({ query: { text: '* graph' } });
+    void hs.search({ query: { collection: 'LIRIS' } });
+    expect(calls.map((c) => c.params.query)).toEqual(['*:*', { text: '* graph' }, { collection: 'LIRIS' }]);
+    expect(renderMissingQuery).not.toHaveBeenCalled();
+  });
+
+  it('an invalid query is reported by the request, not shown as missing', async () => {
+    const calls = controlFetch();
+    const onError = vi.fn();
+    const hs = new HalSearch({ container, onError });
+    const p = hs.search({ query: { structId: 'abc' } });
+    expect(calls).toHaveLength(1);
+    calls[0].reject(new Error('Invalid HAL structId "abc": expected digits only.'));
+    await p;
+    expect(renderMissingQuery).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
   });
 });
 

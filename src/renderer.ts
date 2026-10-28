@@ -223,6 +223,18 @@ export function renderError(container: HTMLElement, err: Error, labels: Labels):
   live.textContent = message;
 }
 
+/**
+ * Renders the "no search criterion" notice (`labels.missingQuery`, class `hal-empty hal-empty--missing-query`)
+ * and announces it. HalSearch shows it instead of requesting the whole archive.
+ */
+export function renderMissingQuery(container: HTMLElement, labels: Labels): void {
+  const live = resetContainer(container);
+  container.removeAttribute('aria-busy');
+
+  container.appendChild(el('p', 'hal-empty hal-empty--missing-query', labels.missingQuery));
+  live.textContent = labels.missingQuery;
+}
+
 // ---------------------------------------------------------------------------
 // Article card
 // ---------------------------------------------------------------------------

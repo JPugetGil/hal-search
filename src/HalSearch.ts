@@ -15,10 +15,10 @@ import type {
 } from './types';
 import type { Palette } from './theme';
 import { fetchArticles } from './api';
-import { buildHalWebUrl } from './query';
+import { buildHalWebUrl, buildSolrQuery, hasQueryCriterion } from './query';
 import { resolveLabels } from './labels';
 import { isSafeColor, paletteToCssVars, resolvePalette } from './theme';
-import { renderError, renderLoading, renderResults } from './renderer';
+import { renderError, renderLoading, renderMissingQuery, renderResults } from './renderer';
 import { renderSvg } from './svg';
 import { injectDefaultStyles } from './styles';
 
@@ -184,11 +184,20 @@ export class HalSearch {
    * Starts a new search with a single request.
    * `filters` are merged over the default filters and `sort` falls back to the default sort;
    * `lvl` and `rows`, when given, are kept for the following requests (like setLevel()).
-   * Resolves with the response, or `undefined` when the request failed, was superseded or aborted.
+   *
+   * A query without any criterion (`{}`, `{ idHal: '' }`, `{ text: '***' }`, `''`: see `hasQueryCriterion`)
+   * would list the whole HAL archive, so no request is sent: any request in flight is aborted, the container
+   * shows `labels.missingQuery`, neither `onResults` nor `onError` is called and the promise resolves
+   * `undefined` (the same applies to the page and level methods). A raw Solr string such as `'*:*'` is
+   * explicit and is sent.
+   *
+   * Resolves with the response, or `undefined` when the request failed, was superseded or aborted,
+   * or when the query has no criterion.
    */
   search(params: SearchParams): Promise<HalApiResponse | undefined> {
     if (this.destroyed) return Promise.resolve(undefined);
-    this.query = params.query;
+    // `?? {}`: a JS caller omitting the query gets the "no criterion" state, not a silent no-op.
+    this.query = params.query ?? {};
     this.filters = mergeFilters(this.defaultFilters, params.filters);
     this.sort = params.sort ?? this.defaultSort;
     if (params.lvl !== undefined) this.lvl = params.lvl;
@@ -286,13 +295,21 @@ export class HalSearch {
 
     // Supersede the previous request: abort it and invalidate its token.
     this.controller?.abort();
+    this.controller = undefined;
+    const token = ++this.token;
+    this.displayed = undefined;
+
+    // Same rule as the element and the SSR: never request the whole archive (q=*:*) by accident.
+    if (isMissingQuery(query)) {
+      this.pagination = { currentPage: 1, totalFound: 0, rows: this.rows, start: 0 };
+      renderMissingQuery(this.container, this.labels);
+      return undefined;
+    }
+
     const controller = new AbortController();
     this.controller = controller;
-    const token = ++this.token;
-
     const start = (page - 1) * this.rows;
     this.pagination = { currentPage: page, totalFound: this.pagination.totalFound, rows: this.rows, start };
-    this.displayed = undefined;
     renderLoading(this.container, this.labels);
 
     let response: HalApiResponse;
@@ -485,6 +502,20 @@ function defaultStyleRoot(container: HTMLElement): Document | ShadowRoot {
   const root = typeof container.getRootNode === 'function' ? container.getRootNode() : undefined;
   if (typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot) return root;
   return container.ownerDocument ?? document;
+}
+
+/**
+ * True when the query is well-formed but has no criterion: requesting it would list the whole archive.
+ * An invalid query (bad structId or collection code) is not "missing": the request reports its validation error.
+ */
+function isMissingQuery(query: HalQueryInput): boolean {
+  if (hasQueryCriterion(query)) return false;
+  try {
+    buildSolrQuery(query);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** CSS declarations, one per line: `--hal-accent: #0052cc;` */

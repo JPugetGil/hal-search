@@ -162,6 +162,8 @@ export interface Labels {
   opensInNewTab: string;
   /** Group heading for documents without a year: 'Undated' */
   undated: string;
+  /** Shown instead of a request when the query has no criterion (see hasQueryCriterion): 'No search criterion given.' */
+  missingQuery: string;
   /** Human-readable labels for HAL docType_s codes, e.g. { ART: 'Journal article' } */
   docTypes: Record<string, string>;
 }

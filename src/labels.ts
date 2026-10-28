@@ -32,6 +32,7 @@ export const DEFAULT_LABELS: Labels = Object.freeze({
   title: 'Publications',
   opensInNewTab: '(opens in a new tab)',
   undated: 'Undated',
+  missingQuery: 'No search criterion given.',
   docTypes: DOC_TYPE_LABELS,
 });
 
