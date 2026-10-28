@@ -1,6 +1,6 @@
 {
   "name": "hal-search",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Display publications from the HAL open archive on any website or GitHub README: HTML cards, web component or SVG.",
   "keywords": [
     "hal",
