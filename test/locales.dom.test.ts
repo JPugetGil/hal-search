@@ -260,6 +260,22 @@ describe('<hal-search lang>', () => {
     expect(mount.textContent).toContain('Journal article');
   });
 
+  it('shows the missing-query message in French, without a request', async () => {
+    const el = create({ lang: 'fr' });
+    await flush();
+    await flush();
+    const mount = mountOf(el);
+    expect(mount.querySelector('.hal-empty--missing-query')?.textContent).toBe('Aucun critère de recherche indiqué.');
+    expect(mount.getAttribute('lang')).toBe('fr');
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    el.setAttribute('id-hal', 'jpugetgil');
+    await flush();
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(liveText(mount)).toBe(`${fr(9183)} résultats, Page 1 sur 919`);
+  });
+
   it('applies the labels attribute on top of French', async () => {
     const el = create({ 'id-hal': 'jpugetgil', lang: 'fr', labels: '{"docTypes":{"ART":"Article"}}' });
     await flush();

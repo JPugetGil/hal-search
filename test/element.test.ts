@@ -22,8 +22,8 @@ vi.mock('../src/renderer', () => ({
   renderResults: vi.fn((c: HTMLElement, docs: HalDoc[]) => {
     c.textContent = `results:${docs.map((d) => d.docid).join(',')}`;
   }),
-  renderMissingQuery: vi.fn((c: HTMLElement) => {
-    c.textContent = 'missing';
+  renderMissingQuery: vi.fn((c: HTMLElement, labels: { missingQuery?: string }) => {
+    c.textContent = `missing:${labels.missingQuery ?? ''}`;
   }),
 }));
 
@@ -37,14 +37,14 @@ vi.mock('../src/svg', () => ({
   renderSvg: vi.fn((docs: HalDoc[], o: { mainColor?: string }) => `<svg data-main="${o.mainColor ?? ''}" data-count="${docs.length}"></svg>`),
 }));
 
-vi.mock('../src/query', async (importOriginal) => ({
-  // The real criterion rule (shared with the SSR), a fake web URL.
-  hasQueryCriterion: (await importOriginal<typeof import('../src/query')>()).hasQueryCriterion,
-  buildHalWebUrl: vi.fn(() => 'https://hal.science/'),
-}));
+vi.mock('../src/query', async (importOriginal) => {
+  // The real criterion rule (shared with HalSearch and the SSR), a fake web URL.
+  const { buildSolrQuery, hasQueryCriterion } = await importOriginal<typeof import('../src/query')>();
+  return { buildSolrQuery, hasQueryCriterion, buildHalWebUrl: vi.fn(() => 'https://hal.science/') };
+});
 
 vi.mock('../src/labels', () => ({
-  resolveLabels: (o?: Record<string, unknown>) => ({ loading: 'Loading…', ...o }),
+  resolveLabels: (o?: Record<string, unknown>) => ({ loading: 'Loading…', missingQuery: 'No criterion.', ...o }),
 }));
 
 vi.mock('../src/theme', () => ({
@@ -377,10 +377,43 @@ describe('<hal-search>', () => {
     expect(el.querySelector('script')).toBeNull();
   });
 
-  it('does not search without a criterion', async () => {
-    create({ lvl: '2' });
+  it('shows labels.missingQuery without a criterion, and sends no request', async () => {
+    const el = create({ lvl: '2', theme: 'dark' });
     await flush();
     expect(fetchArticles).not.toHaveBeenCalled();
+    expect(mountOf(el).textContent).toBe('missing:No criterion.');
+    expect(el.getAttribute('data-hal-theme')).toBe('dark');
+
+    // Overridden like any label
+    const custom = create({ labels: '{"missingQuery":"Add an id-hal attribute."}' });
+    await flush();
+    expect(mountOf(custom).textContent).toBe('missing:Add an id-hal attribute.');
+    expect(fetchArticles).not.toHaveBeenCalled();
+  });
+
+  it('sends exactly one request once a criterion is added', async () => {
+    const el = create({ lvl: '2' });
+    await flush();
+    // Other changes keep the missing-query state without a request
+    el.setAttribute('theme', 'dark');
+    el.setAttribute('rows', '5');
+    await flush();
+    expect(fetchArticles).not.toHaveBeenCalled();
+
+    el.setAttribute('id-hal', 'jdupont');
+    el.setAttribute('lvl', '3');
+    await flush();
+    expect(fetchArticles).toHaveBeenCalledTimes(1);
+    expect(calls[0].params).toMatchObject({ query: { idHal: 'jdupont' }, lvl: 3, rows: 5 });
+    calls[0].resolve(reply(['a']));
+    await flush();
+    expect(mountOf(el).textContent).toBe('results:a');
+
+    // Removing it shows the missing-query state again, without a request
+    el.removeAttribute('id-hal');
+    await flush();
+    expect(fetchArticles).toHaveBeenCalledTimes(1);
+    expect(mountOf(el).textContent).toBe('missing:No criterion.');
   });
 
   it('does not list the whole archive for a search made only of Solr syntax', async () => {
@@ -388,7 +421,7 @@ describe('<hal-search>', () => {
     create({ search: '"" ??? -' });
     await flush();
     expect(fetchArticles).not.toHaveBeenCalled();
-    expect(mountOf(el).textContent).toBe('');
+    expect(mountOf(el).textContent).toBe('missing:No criterion.');
 
     el.setAttribute('search', '* graph');
     await flush();

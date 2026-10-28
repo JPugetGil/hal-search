@@ -1,7 +1,6 @@
 import type { ColorOptions, HalApiResponse, Labels, SearchParams } from './types';
 import { HalSearch, HAL_SEARCH_DEFAULTS } from './HalSearch';
 import type { HalSearchOptions } from './HalSearch';
-import { hasQueryCriterion } from './query';
 import { parseUrlParams } from './url-params';
 import { injectElementStyles } from './styles';
 
@@ -124,10 +123,12 @@ interface ElementSnapshot {
   search: SearchParams;
 }
 
-function readSnapshot(el: Element): ElementSnapshot | undefined {
+/**
+ * Reads the attributes. A query without criterion (no attribute, `search="*"`) is kept: HalSearch renders
+ * `labels.missingQuery` for it without sending any request (same rule as the SSR: never list the whole archive).
+ */
+function readSnapshot(el: Element): ElementSnapshot {
   const state = parseUrlParams(attributesToUrlParams(el));
-  // Same rule as the SSR: `search="*"` is no criterion and must not list the whole archive.
-  if (!hasQueryCriterion(state.query)) return undefined;
   const apiBase = el.getAttribute('api-base')?.trim();
   return {
     config: {
@@ -211,11 +212,11 @@ function createElementClass(): CustomElementConstructor {
     }
 
     private _update(): void {
-      const snapshot = this.isConnected ? readSnapshot(this) : undefined;
-      if (!snapshot) {
+      if (!this.isConnected) {
         this._teardown();
         return;
       }
+      const snapshot = readSnapshot(this);
       const configKey = JSON.stringify(snapshot.config);
       const appearanceKey = JSON.stringify(snapshot.appearance);
       const searchKey = JSON.stringify(snapshot.search);
@@ -282,6 +283,8 @@ function createElementClass(): CustomElementConstructor {
 /**
  * Registers the `<hal-search>` custom element (open Shadow DOM, attributes = public URL scheme in kebab-case).
  * No-op outside the browser (no `customElements`) and when the tag is already defined.
+ * Without a query criterion (no `id-hal`, `orcid`, `struct-id`, `collection`, `search` or `q`, or only Solr syntax
+ * such as `search="*"`) it shows `labels.missingQuery` and sends no request, like HalSearch and the SVG service.
  * Dispatches `hal-results` (`detail.response`) and `hal-error` (`detail.error`), both bubbling and composed.
  */
 export function defineHalSearchElement(tagName = 'hal-search'): void {
