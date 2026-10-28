@@ -14,6 +14,8 @@ interface Condition {
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as {
+  types: string;
+  typesVersions?: Record<string, Record<string, string[]>>;
   exports: Record<string, string | { import: Condition; require: Condition }>;
 };
 
@@ -41,6 +43,16 @@ describe('package.json exports', () => {
       expect(cjs.types, subpath).toBe(esm.types.replace(/\.d\.ts$/, '.d.cts'));
       expect(cjs.default, subpath).toMatch(/\.cjs$/);
     }
+  });
+
+  it('maps every subpath for TypeScript projects that ignore `exports` (moduleResolution node10)', () => {
+    // `types` covers the root; typesVersions the subpaths ('hal-search/svg' → node_modules/hal-search/svg).
+    const root = ENTRIES.find(([subpath]) => subpath === '.')?.[1];
+    expect(pkg.types).toBe(root?.import.types);
+    const subpaths = Object.fromEntries(
+      ENTRIES.filter(([subpath]) => subpath !== '.').map(([subpath, { import: esm }]) => [subpath.slice(2), [esm.types]]),
+    );
+    expect(pkg.typesVersions).toEqual({ '*': subpaths });
   });
 });
 

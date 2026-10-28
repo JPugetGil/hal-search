@@ -28,6 +28,13 @@
   "main": "./dist/hal-search.cjs",
   "module": "./dist/hal-search.es.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "svg": [
+        "./dist/svg-entry.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
       "import": {
