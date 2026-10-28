@@ -56,7 +56,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --config vite.config.svg.ts && vite build --config vite.config.cdn.ts && tsc -p tsconfig.build.json",
+    "build": "vite build && vite build --config vite.config.svg.ts && vite build --config vite.config.cdn.ts && npm run build:types",
+    "build:types": "tsc -p tsconfig.build.json && node scripts/dts-extensions.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "typecheck:test": "tsc -p tsconfig.test.json",
