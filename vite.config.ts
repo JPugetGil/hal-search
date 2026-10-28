@@ -14,7 +14,8 @@ export default defineConfig({
     rollupOptions: {
       external: [],
     },
-    sourcemap: true,
+    // Maps stay in dist/ for local debugging but are not published (package.json "files"): no sourceMappingURL.
+    sourcemap: 'hidden',
     minify: 'oxc',
   },
 });

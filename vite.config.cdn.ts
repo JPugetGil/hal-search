@@ -12,7 +12,8 @@ export default defineConfig({
       fileName: () => 'hal-search.min.js',
     },
     emptyOutDir: false,
-    sourcemap: true,
+    // Maps stay in dist/ for local debugging but are not published (package.json "files"): no sourceMappingURL.
+    sourcemap: 'hidden',
     minify: 'oxc',
   },
 });

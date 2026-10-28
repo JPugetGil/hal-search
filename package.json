@@ -40,7 +40,8 @@
   "unpkg": "./dist/hal-search.min.js",
   "jsdelivr": "./dist/hal-search.min.js",
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map"
   ],
   "sideEffects": [
     "./dist/hal-search.min.js"
