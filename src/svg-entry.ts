@@ -31,8 +31,8 @@ export {
   buildMarkdownSnippet,
   buildWebComponentSnippet,
 } from './embed';
+// Types only: every one must compile without the DOM lib (the widget types, e.g. HalSearchOptions, are not here).
 export type {
-  HalSearchOptions,
   HalDoc,
   HalApiResponse,
   HalResponseBody,

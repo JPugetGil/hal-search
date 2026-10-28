@@ -13,32 +13,55 @@ import * as svgEntry from '../src/svg-entry';
 /** Runtime exports of the main entry that need a DOM: the HTML widget, its stylesheet, the web component. */
 const DOM_ONLY_EXPORTS = ['DEFAULT_CSS', 'HalSearch', 'defineHalSearchElement', 'injectDefaultStyles'];
 
+/**
+ * Type exports of the main entry that name DOM types (HTMLElement, Document, ShadowRoot...): a Node project
+ * without the DOM lib could not compile the svg entry's declarations with them (`skipLibCheck: false`).
+ */
+const DOM_ONLY_TYPES = ['HalSearchOptions', 'HalSearchState'];
+
 /** Modules the DOM-free entry must never load. */
 const DOM_MODULES = ['HalSearch', 'element', 'renderer', 'styles'];
 
 const SRC = fileURLToPath(new URL('../src/', import.meta.url));
 
-/** Value imports and re-exports (`import type` / `export type` are erased) of a src/ module. */
-function valueDependencies(module: string): string[] {
-  const source = readFileSync(`${SRC}${module}.ts`, 'utf8');
+function sourceOf(module: string): string {
+  return readFileSync(`${SRC}${module}.ts`, 'utf8');
+}
+
+/** Imports and re-exports of a src/ module; type-only ones (erased at runtime) only when `withTypes`. */
+function dependencies(module: string, withTypes = false): string[] {
   const deps: string[] = [];
-  for (const match of source.matchAll(/^(?:import|export)\s+(type\s+)?[^;'"]*?from\s+'\.\/([\w-]+)'/gm)) {
-    if (!match[1]) deps.push(match[2]);
+  for (const match of sourceOf(module).matchAll(/^(?:import|export)\s+(type\s+)?[^;'"]*?from\s+'\.\/([\w-]+)'/gm)) {
+    if (withTypes || !match[1]) deps.push(match[2]);
   }
   return deps;
 }
 
-/** Every src/ module loaded at runtime from `entry`. */
-function moduleGraph(entry: string): Set<string> {
+/** Value imports and re-exports (`import type` / `export type` are erased) of a src/ module. */
+function valueDependencies(module: string): string[] {
+  return dependencies(module);
+}
+
+/** Every src/ module loaded at runtime from `entry` (or whose declarations it references, `withTypes`). */
+function moduleGraph(entry: string, withTypes = false): Set<string> {
   const seen = new Set<string>();
   const queue = [entry];
   while (queue.length > 0) {
     const module = queue.pop() as string;
     if (seen.has(module)) continue;
     seen.add(module);
-    queue.push(...valueDependencies(module));
+    queue.push(...dependencies(module, withTypes));
   }
   return seen;
+}
+
+/** Names re-exported by the `export type { … }` statements of a src/ module. */
+function typeExports(module: string): string[] {
+  const names: string[] = [];
+  for (const match of sourceOf(module).matchAll(/^export\s+type\s*\{([^}]*)\}/gm)) {
+    names.push(...match[1].split(',').map((name) => name.trim()).filter(Boolean));
+  }
+  return names;
 }
 
 // ---------------------------------------------------------------------------
@@ -65,6 +88,22 @@ describe('hal-search/svg entry', () => {
     const graph = moduleGraph('svg-entry');
     expect(graph.has('svg')).toBe(true);
     expect(graph.has('headless')).toBe(true);
+    expect(DOM_MODULES.filter((module) => graph.has(module))).toEqual([]);
+  });
+
+  it('exports the types of the main entry except the DOM-only ones', () => {
+    // Type exports are erased at runtime: compared on the sources. A failure here usually means a type was
+    // added to src/index.ts only (add it to src/svg-entry.ts when it compiles without the DOM lib), or a
+    // DOM-only type to the svg entry (`npm run typecheck` also checks the entry without the DOM lib).
+    const main = typeExports('index');
+    const svg = typeExports('svg-entry');
+    expect(svg.filter((name) => !main.includes(name))).toEqual([]);
+    expect(main.filter((name) => !svg.includes(name)).sort()).toEqual(DOM_ONLY_TYPES);
+  });
+
+  it('never references the declarations of the DOM modules, even type-only', () => {
+    const graph = moduleGraph('svg-entry', true);
+    expect(graph.has('types')).toBe(true);
     expect(DOM_MODULES.filter((module) => graph.has(module))).toEqual([]);
   });
 

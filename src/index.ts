@@ -28,7 +28,6 @@ export {
   buildWebComponentSnippet,
 } from './embed';
 export type {
-  HalSearchOptions,
   HalDoc,
   HalApiResponse,
   HalResponseBody,
@@ -51,7 +50,7 @@ export type {
   PaginationState,
   UrlState,
 } from './types';
-export type { HalSearchState } from './HalSearch';
+export type { HalSearchOptions, HalSearchState } from './HalSearch';
 export type { Palette } from './theme';
 export type { DocLinks } from './links';
 export type { ParseLimits } from './url-params';

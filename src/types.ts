@@ -205,39 +205,9 @@ export interface SearchParams {
   lvl?: DetailLevel;
 }
 
-/** Options passed to the HalSearch constructor */
-export interface HalSearchOptions extends DisplayOptions {
-  /** DOM element or CSS selector for the render target */
-  container: HTMLElement | string;
-  /** HAL API base URL — override for proxies/testing. Default: HAL production */
-  apiBase?: string;
-  /** Number of results per page. Default: 10 */
-  rows?: number;
-  /** Default: 'date-desc' */
-  sort?: SortOrder;
-  /** Default filters, merged under the filters given to search() */
-  filters?: HalFilters;
-  /** Render the article list as HTML cards or as an inline SVG. Default: 'html' */
-  output?: OutputFormat;
-  /** Inject default CSS. Default: true */
-  injectStyles?: boolean;
-  /** Where default CSS is injected. Default: document (head). The web component passes its ShadowRoot. */
-  styleRoot?: Document | ShadowRoot;
-  /** Heading level of article titles in HTML output. Default: 3 */
-  headingLevel?: 2 | 3 | 4 | 5 | 6;
-  /** SVG header title (output 'svg'). Default: labels.title */
-  title?: string;
-  /**
-   * Describe the displayed page for search engines: a `<script type="application/ld+json">` (schema.org
-   * `ItemList` of `ScholarlyArticle`) in the light DOM, next to the results (in the container, or as a child
-   * of the shadow host when the container lives in a shadow root), replaced on each render. Default: false
-   */
-  structuredData?: boolean;
-  /** Called after each successful fetch. Exceptions thrown here never replace the rendered results. */
-  onResults?: (response: HalApiResponse) => void;
-  /** Called on fetch error (aborted requests are not errors) */
-  onError?: (err: Error) => void;
-}
+// HalSearchOptions (the HalSearch constructor options) lives in HalSearch.ts: it names DOM types
+// (HTMLElement, Document, ShadowRoot), and this module is also part of the DOM-free `hal-search/svg`
+// entry, whose declarations must compile in a Node project without the DOM lib.
 
 /** Parameters of a single HAL API request */
 export interface FetchParams {

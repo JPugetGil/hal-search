@@ -1,0 +1,13 @@
+{
+  // The DOM-free `hal-search/svg` entry and everything it reaches (types included) must compile without the
+  // DOM lib, like a Node project with `lib: ["ES2022"]` and `skipLibCheck: false` checks its declarations.
+  // Part of `npm run typecheck`.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2020"],
+    "types": ["node"]
+  },
+  "include": [],
+  "files": ["src/svg-entry.ts"]
+}

@@ -1,5 +1,6 @@
-import type { ColorOptions, HalApiResponse, HalSearchOptions, Labels, SearchParams } from './types';
+import type { ColorOptions, HalApiResponse, Labels, SearchParams } from './types';
 import { HalSearch, HAL_SEARCH_DEFAULTS } from './HalSearch';
+import type { HalSearchOptions } from './HalSearch';
 import { hasQueryCriterion } from './query';
 import { parseUrlParams } from './url-params';
 import { injectElementStyles } from './styles';
