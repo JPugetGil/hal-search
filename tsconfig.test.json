@@ -6,7 +6,8 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "paths": {
-      "hal-search": ["./src/index.ts"]
+      "hal-search": ["./src/index.ts"],
+      "hal-search/svg": ["./src/svg-entry.ts"]
     }
   },
   "include": ["src", "test", "ssr-app/src"]

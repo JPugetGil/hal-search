@@ -34,6 +34,11 @@
       "import": "./dist/hal-search.es.js",
       "require": "./dist/hal-search.cjs"
     },
+    "./svg": {
+      "types": "./dist/svg-entry.d.ts",
+      "import": "./dist/hal-search-svg.es.js",
+      "require": "./dist/hal-search-svg.cjs"
+    },
     "./dist/hal-search.min.js": "./dist/hal-search.min.js",
     "./package.json": "./package.json"
   },
@@ -51,7 +56,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --config vite.config.cdn.ts && tsc -p tsconfig.build.json",
+    "build": "vite build && vite build --config vite.config.svg.ts && vite build --config vite.config.cdn.ts && tsc -p tsconfig.build.json",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "typecheck:test": "tsc -p tsconfig.test.json",

@@ -19,15 +19,15 @@ import { assertWellFormedXml } from './helpers/xml';
 // Library under test
 // ---------------------------------------------------------------------------
 
-// The service runs against the real library (`hal-search` → src/index.ts, also proving the entry point is
-// importable in Node, as SSR dev mode requires). Only renderSvg can be replaced per test.
+// The service runs against the real library (`hal-search/svg` → src/svg-entry.ts, also proving the entry point
+// is importable in Node, as SSR dev mode requires). Only renderSvg can be replaced per test.
 const lib = vi.hoisted(() => ({
   /** Per-test replacement of renderSvg (e.g. a deliberately unsafe renderer) */
   renderSvgOverride: undefined as undefined | ((...args: unknown[]) => string),
 }));
 
-vi.mock('hal-search', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../src/index')>();
+vi.mock('hal-search/svg', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/svg-entry')>();
   return {
     ...actual,
     renderSvg: (...args: Parameters<typeof actual.renderSvg>) =>
