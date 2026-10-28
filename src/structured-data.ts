@@ -1,6 +1,7 @@
 import type { HalDoc, Labels } from './types';
 import { decodeEntities, formatAuthors, getTitle, getYear, normalizeSpace } from './format';
 import { getDocLinks } from './links';
+import { trustedScript } from './trusted-types';
 
 // schema.org JSON-LD describing the displayed page of results (SEO of lab and personal pages).
 // Built from the fields fetched by the detail level: richer from lvl 1 (title, authors), open access
@@ -130,12 +131,18 @@ export function serializeJsonLd(data: unknown): string {
 }
 
 /**
- * A `<script type="application/ld+json">` holding `data` (as a text node: no HTML parsing).
- * JSON-LD is a data block: browsers never execute it, so a Content-Security-Policy does not block it.
+ * A `<script type="application/ld+json">` holding `data` (no HTML parsing).
+ * JSON-LD is a data block: browsers never execute it, so a Content-Security-Policy does not block it. Under
+ * Trusted Types (`require-trusted-types-for 'script'`) the text is set through the `hal-search` policy
+ * (see trusted-types.ts), else every render would report a violation; when the page refuses that policy,
+ * it is a text node as without Trusted Types.
  */
 export function createStructuredDataScript(doc: Document, data: unknown): HTMLScriptElement {
   const script = doc.createElement('script');
   script.type = 'application/ld+json';
-  script.appendChild(doc.createTextNode(serializeJsonLd(data)));
+  const json = serializeJsonLd(data);
+  const trusted = trustedScript(doc.defaultView, json);
+  if (trusted !== undefined) script.text = trusted;
+  else script.appendChild(doc.createTextNode(json));
   return script;
 }
