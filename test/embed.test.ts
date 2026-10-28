@@ -175,7 +175,7 @@ describe('buildWebComponentSnippet', () => {
       [
         'id-hal', 'orcid', 'struct-id', 'collection', 'search', 'q', 'doc-types', 'year-from', 'year-to', 'oa',
         'sort', 'lvl', 'rows', 'page', 'output', 'theme', 'bg', 'text', 'main', 'group-by', 'highlight',
-        'max-authors', 'svg-title', 'credit',
+        'max-authors', 'svg-title', 'credit', 'lang',
       ].sort(),
     );
   });
@@ -189,5 +189,50 @@ describe('buildWebComponentSnippet', () => {
 
   it('emits a bare element for an empty state', () => {
     expect(buildWebComponentSnippet({})).toBe('<hal-search></hal-search>');
+  });
+
+  it('sets the global lang attribute for a non-default locale', () => {
+    expect(buildWebComponentSnippet({ query: { idHal: 'a' }, locale: 'fr' })).toBe('<hal-search id-hal="a" lang="fr"></hal-search>');
+    expect(buildWebComponentSnippet({ query: { idHal: 'a' }, locale: 'fr-CA' })).toBe('<hal-search id-hal="a" lang="fr"></hal-search>');
+    // English is the default; unknown languages are dropped
+    expect(buildWebComponentSnippet({ query: { idHal: 'a' }, locale: 'en' })).toBe('<hal-search id-hal="a"></hal-search>');
+    expect(buildWebComponentSnippet({ query: { idHal: 'a' }, locale: 'de' })).toBe('<hal-search id-hal="a"></hal-search>');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Locale
+// ---------------------------------------------------------------------------
+
+describe('snippets in French', () => {
+  it('passes lang to every URL and translates the default alt text and iframe title', () => {
+    expect(buildMarkdownSnippet({ svgBase: 'https://svg.example', query: { idHal: 'jpugetgil' }, locale: 'fr' })).toBe(
+      '[![Publications sur HAL](https://svg.example/svg?idHal=jpugetgil&lang=fr)](https://cv.hal.science/jpugetgil)',
+    );
+    expect(buildSvgUrl('https://svg.example', { query: { collection: 'LIRIS' }, locale: 'fr' })).toBe(
+      'https://svg.example/svg?collection=LIRIS&lang=fr',
+    );
+    expect(buildEmbedSnippet({ embedBase: 'https://x.example', query: { idHal: 'a' }, locale: 'fr' })).toBe(
+      '<iframe src="https://x.example/embed.html?idHal=a&amp;lang=fr" title="Publications sur HAL" width="100%" height="600"' +
+        ' loading="lazy" style="border:0"></iframe>',
+    );
+  });
+
+  it('keeps an explicit alt text and uses lang in both dark-mode sources', () => {
+    const html = buildMarkdownSnippet({
+      svgBase: 'https://svg.example',
+      query: { idHal: 'jpugetgil' },
+      locale: 'fr',
+      darkMode: true,
+      alt: 'Mes publications',
+    });
+    expect(html).toContain('srcset="https://svg.example/svg?idHal=jpugetgil&amp;lang=fr&amp;theme=dark"');
+    expect(html).toContain('<img src="https://svg.example/svg?idHal=jpugetgil&amp;lang=fr&amp;theme=light" alt="Mes publications">');
+  });
+
+  it('falls back to English for an unknown locale', () => {
+    expect(buildMarkdownSnippet({ svgBase: 'https://svg.example', query: { idHal: 'a' }, locale: 'xx' })).toBe(
+      '[![Publications from HAL](https://svg.example/svg?idHal=a)](https://cv.hal.science/a)',
+    );
   });
 });

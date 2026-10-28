@@ -34,6 +34,7 @@
       // and `type` (output) still work; invalid values are dropped by parseUrlParams.
       const state = parseUrlParams(new URLSearchParams(location.search));
       document.body.dataset.theme = state.theme ?? 'light';
+      if (state.locale) document.documentElement.lang = state.locale;
       if (state.title) document.title = state.title;
 
       if (!hasQueryCriterion(state.query)) {
@@ -42,6 +43,7 @@
       } else {
         const hs = new HalSearch({
           container: '#publications',
+          locale: state.locale,
           output: state.output,
           lvl: state.lvl,
           rows: state.rows,

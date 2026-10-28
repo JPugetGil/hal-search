@@ -229,7 +229,7 @@ export function buildHalUrl(params: Omit<FetchParams, 'signal'>): string {
   const search = new URLSearchParams();
   search.set('q', buildSolrQuery(params.query));
   for (const fq of buildFilterQueries(params.filters)) search.append('fq', fq);
-  search.set('fl', resolveFields(params.lvl));
+  search.set('fl', resolveFields(params.lvl, params.locale));
   const sort = resolveSort(params.sort ?? 'date-desc');
   if (sort) search.set('sort', sort);
   search.set('rows', String(nonNegativeInt(params.rows, 10)));

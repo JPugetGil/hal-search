@@ -148,6 +148,17 @@ describe('parseUrlParams', () => {
     expect(parse('credit=true').showCredit).toBe(true);
   });
 
+  it('parses lang: built-in locales, region subtags normalised, others dropped', () => {
+    expect(parse('lang=fr').locale).toBe('fr');
+    expect(parse('lang=en').locale).toBe('en');
+    expect(parse('lang=fr-FR').locale).toBe('fr');
+    expect(parse('lang=FR_ca').locale).toBe('fr');
+    expect(parse('lang=%20fr%20').locale).toBe('fr');
+    for (const invalid of ['de', 'xx', 'french', 'f', 'fr-', '"><svg>', '']) {
+      expect(parse(`lang=${encodeURIComponent(invalid)}`), invalid).not.toHaveProperty('locale');
+    }
+  });
+
   it('ignores unknown params', () => {
     expect(parse('foo=bar&idHal=x')).toEqual({ query: { idHal: 'x' }, filters: {} });
   });
@@ -237,6 +248,7 @@ describe('parseUrlParams(toUrlParams(x))', () => {
       maxAuthors: 5,
       title: 'Publications — équipe',
       showCredit: false,
+      locale: 'fr',
     };
     expect(parseUrlParams(toUrlParams(state))).toEqual(state);
   });
@@ -254,6 +266,17 @@ describe('parseUrlParams(toUrlParams(x))', () => {
     const params = toUrlParams({ query: { orcid: 'https://orcid.org/0000-0002-1825-009x' } });
     expect(params.toString()).toBe('orcid=0000-0002-1825-009X');
     expect(parseUrlParams(params).query).toEqual({ orcid: '0000-0002-1825-009X' });
+  });
+
+  it('round-trips lang: built-in locales only, English implied', () => {
+    expect(toUrlParams({ query: { idHal: 'a' }, locale: 'fr' }).toString()).toBe('idHal=a&lang=fr');
+    expect(parseUrlParams(toUrlParams({ query: { idHal: 'a' }, locale: 'fr' })).locale).toBe('fr');
+    // Canonical form: region subtags and case are normalised
+    expect(toUrlParams({ query: {}, locale: 'FR-ca' }).toString()).toBe('lang=fr');
+    // Default and unknown languages are omitted
+    expect(toUrlParams({ query: {}, locale: 'en' }).toString()).toBe('');
+    expect(toUrlParams({ query: {}, locale: 'de' }).toString()).toBe('');
+    expect(toUrlParams({ query: {}, locale: '"><x' }).toString()).toBe('');
   });
 
   it('round-trips legacy URLs into the new scheme', () => {
