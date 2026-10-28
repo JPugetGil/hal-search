@@ -20,6 +20,7 @@ export { getDocLinks } from './links';
 export { DOC_TYPE_LABELS, docTypeLabel } from './doctypes';
 export { LEVEL_FIELDS, LEVEL_NAMES, resolveFields, normalizeDomains } from './levels';
 export { DEFAULT_LABELS, resolveLabels, formatLabel } from './labels';
+export { DEFAULT_LOCALE, LOCALES, resolveLocale } from './locales';
 export { LIGHT_PALETTE, DARK_PALETTE, isSafeColor, resolvePalette, paletteToCssVars } from './theme';
 export { renderSvg, renderErrorSvg } from './svg';
 export { fetchSvg } from './headless';
