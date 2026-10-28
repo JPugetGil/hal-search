@@ -25,7 +25,7 @@ describe('Node import safety', () => {
       const params = attributesToUrlParams({ getAttribute: (n: string) => (n === attr ? 'v' : null) });
       expect(params.get(param)).toBe('v');
     }
-    const urlAttributes = HAL_SEARCH_ATTRIBUTES.filter((a) => !['heading-level', 'labels', 'api-base'].includes(a));
+    const urlAttributes = HAL_SEARCH_ATTRIBUTES.filter((a) => !['heading-level', 'labels', 'api-base', 'structured-data'].includes(a));
     expect(urlAttributes.sort()).toEqual(Object.values(WEB_COMPONENT_ATTRIBUTES).sort());
   });
 

@@ -3,6 +3,7 @@ import type {
   DetailLevel,
   GroupBy,
   HalApiResponse,
+  HalDoc,
   HalFilters,
   HalQueryInput,
   HalSearchOptions,
@@ -20,6 +21,7 @@ import { resolveLabels } from './labels';
 import { isSafeColor, paletteToCssVars, resolvePalette } from './theme';
 import { renderError, renderLoading, renderMissingQuery, renderResults } from './renderer';
 import { renderSvg } from './svg';
+import { buildStructuredData, createStructuredDataScript, STRUCTURED_DATA_ATTRIBUTE } from './structured-data';
 import { attachStyleSheet, injectDefaultStyles } from './styles';
 import type { AttachedStyleSheet } from './styles';
 
@@ -95,6 +97,7 @@ export class HalSearch {
   private readonly highlightAuthors: string[];
   private readonly showCredit: boolean;
   private readonly title?: string;
+  private readonly structuredData: boolean;
   private readonly onResults?: (response: HalApiResponse) => void;
   private readonly onError?: (err: Error) => void;
   private readonly addedClass: boolean;
@@ -123,6 +126,8 @@ export class HalSearch {
   private appliedVars: string[] = [];
   /** Scoped stylesheet of the color overrides for the 'auto' theme (light and dark sets) */
   private colorsSheet: AttachedStyleSheet | undefined;
+  /** JSON-LD of the displayed documents (structuredData option) */
+  private structuredDataScript: HTMLScriptElement | undefined;
 
   constructor(options: HalSearchOptions) {
     if (!options || !options.container) {
@@ -141,6 +146,7 @@ export class HalSearch {
     this.highlightAuthors = options.highlightAuthors ? [...options.highlightAuthors] : [];
     this.showCredit = options.showCredit ?? true;
     this.title = options.title;
+    this.structuredData = options.structuredData === true;
     this.onResults = options.onResults;
     this.onError = options.onError;
 
@@ -262,6 +268,7 @@ export class HalSearch {
     this.controller?.abort();
     this.controller = undefined;
     this.displayed = undefined;
+    this._setStructuredData();
     this.container.textContent = '';
     this.container.removeAttribute('aria-busy');
     for (const name of this.appliedVars) this.container.style.removeProperty(name);
@@ -299,6 +306,7 @@ export class HalSearch {
     this.controller = undefined;
     const token = ++this.token;
     this.displayed = undefined;
+    this._setStructuredData();
 
     // Same rule as the element and the SSR: never request the whole archive (q=*:*) by accident.
     if (isMissingQuery(query)) {
@@ -382,23 +390,49 @@ export class HalSearch {
       });
       // Set by renderLoading (renderResults and renderError clear it themselves).
       this.container.removeAttribute('aria-busy');
-      return;
+    } else {
+      renderResults(this.container, docs, {
+        lvl: this.lvl,
+        labels: this.labels,
+        pagination: this.pagination,
+        headingLevel: this.headingLevel,
+        groupBy: this.groupBy,
+        maxAuthors: this.maxAuthors,
+        highlightAuthors: this.highlightAuthors,
+        showCredit: this.showCredit,
+        onPageChange: (target: number) => {
+          void this._goTo(target, true);
+        },
+        focusResults,
+      });
     }
+    this._setStructuredData(docs);
+  }
 
-    renderResults(this.container, docs, {
-      lvl: this.lvl,
-      labels: this.labels,
-      pagination: this.pagination,
-      headingLevel: this.headingLevel,
-      groupBy: this.groupBy,
-      maxAuthors: this.maxAuthors,
-      highlightAuthors: this.highlightAuthors,
-      showCredit: this.showCredit,
-      onPageChange: (target: number) => {
-        void this._goTo(target, true);
-      },
-      focusResults,
-    });
+  /**
+   * Replaces the JSON-LD description of the displayed documents (structuredData option), or removes it
+   * (no documents given). It goes to the light DOM, where crawlers read it: the container, or the shadow
+   * host when the container lives in a shadow root (the `<hal-search>` element).
+   */
+  private _setStructuredData(docs?: HalDoc[]): void {
+    this.structuredDataScript?.remove();
+    this.structuredDataScript = undefined;
+    if (!this.structuredData || !docs || docs.length === 0) return;
+
+    const root = typeof this.container.getRootNode === 'function' ? this.container.getRootNode() : undefined;
+    const target = typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot ? root.host : this.container;
+    const script = createStructuredDataScript(
+      target.ownerDocument ?? document,
+      buildStructuredData(docs, {
+        labels: this.labels,
+        start: this.pagination.start,
+        totalFound: this.pagination.totalFound,
+        maxAuthors: this.maxAuthors,
+      }),
+    );
+    script.setAttribute(STRUCTURED_DATA_ATTRIBUTE, this.instanceId);
+    target.appendChild(script);
+    this.structuredDataScript = script;
   }
 
   /** SVG colors are baked into the markup: re-render from the last response, without fetching. */

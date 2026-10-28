@@ -219,6 +219,12 @@ export interface HalSearchOptions extends DisplayOptions {
   headingLevel?: 2 | 3 | 4 | 5 | 6;
   /** SVG header title (output 'svg'). Default: labels.title */
   title?: string;
+  /**
+   * Describe the displayed page for search engines: a `<script type="application/ld+json">` (schema.org
+   * `ItemList` of `ScholarlyArticle`) in the light DOM, next to the results (in the container, or as a child
+   * of the shadow host when the container lives in a shadow root), replaced on each render. Default: false
+   */
+  structuredData?: boolean;
   /** Called after each successful fetch. Exceptions thrown here never replace the rendered results. */
   onResults?: (response: HalApiResponse) => void;
   /** Called on fetch error (aborted requests are not errors) */

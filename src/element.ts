@@ -47,7 +47,7 @@ const COLOR_KEYS = ['backgroundColor', 'textColor', 'mainColor'] as const;
 const BOOLEAN_ATTRIBUTES = new Set(['oa', 'credit']);
 
 /** Attributes only understood by the web component. */
-const WIDGET_ATTRIBUTES = ['heading-level', 'labels', 'api-base'];
+const WIDGET_ATTRIBUTES = ['heading-level', 'labels', 'api-base', 'structured-data'];
 
 /** Every attribute observed by `<hal-search>`. */
 export const HAL_SEARCH_ATTRIBUTES: readonly string[] = [...Object.keys(URL_ATTRIBUTES), ...WIDGET_ATTRIBUTES];
@@ -97,6 +97,16 @@ function parseHeadingLevel(value: string | null): 2 | 3 | 4 | 5 | 6 | undefined 
   return n === 2 || n === 3 || n === 4 || n === 5 || n === 6 ? n : undefined;
 }
 
+/**
+ * Widget-only boolean attribute: present means true (`<hal-search structured-data>`), except the values
+ * `false` and `0` (frameworks such as React 18 write `structured-data="false"`). Absent: undefined.
+ */
+function parseBooleanAttribute(value: string | null): true | undefined {
+  if (value === null) return undefined;
+  const v = value.trim().toLowerCase();
+  return v === 'false' || v === '0' ? undefined : true;
+}
+
 // ---------------------------------------------------------------------------
 // Element
 // ---------------------------------------------------------------------------
@@ -127,6 +137,7 @@ function readSnapshot(el: Element): ElementSnapshot | undefined {
       headingLevel: parseHeadingLevel(el.getAttribute('heading-level')),
       labels: parseLabelsAttribute(el.getAttribute('labels')),
       apiBase: apiBase || undefined,
+      structuredData: parseBooleanAttribute(el.getAttribute('structured-data')),
     },
     appearance: {
       theme: state.theme ?? HAL_SEARCH_DEFAULTS.theme,

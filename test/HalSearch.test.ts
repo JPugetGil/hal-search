@@ -474,6 +474,102 @@ describe('HalSearch without a search criterion', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Structured data (JSON-LD)
+// ---------------------------------------------------------------------------
+
+describe('HalSearch structuredData', () => {
+  const ldScripts = (root: ParentNode = document) =>
+    [...root.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]')];
+  const titled = (ids: string[], numFound = ids.length): HalApiResponse => {
+    const response = reply(ids, numFound);
+    response.response.docs = ids.map((docid) => ({ docid, title_s: [`Paper ${docid}`], uri_s: `https://hal.science/hal-${docid}` }));
+    return response;
+  };
+
+  it('is off by default', async () => {
+    const calls = controlFetch();
+    const hs = new HalSearch({ container });
+    const p = hs.search({ query: 'x' });
+    calls[0].resolve(titled(['a']));
+    await p;
+    expect(ldScripts()).toHaveLength(0);
+  });
+
+  it('describes the displayed page, replaces it on each render and removes it while loading and on destroy', async () => {
+    const calls = controlFetch();
+    const hs = new HalSearch({ container, rows: 2, structuredData: true });
+    const p = hs.search({ query: 'x' });
+    calls[0].resolve(titled(['a', 'b'], 5));
+    await p;
+
+    const [first] = ldScripts();
+    expect(first.parentNode).toBe(container);
+    expect(first.getAttribute('data-hal-search-ld')).toMatch(/^[a-z0-9]+$/);
+    const data = JSON.parse(first.textContent ?? '');
+    expect(data).toMatchObject({ '@type': 'ItemList', numberOfItems: 5 });
+    expect(data.itemListElement.map((e: { position: number; item: { name: string } }) => [e.position, e.item.name])).toEqual([
+      [1, 'Paper a'],
+      [2, 'Paper b'],
+    ]);
+
+    const next = hs.nextPage();
+    expect(ldScripts()).toHaveLength(0);
+    calls[1].resolve(titled(['c', 'd'], 5));
+    await next;
+    expect(ldScripts()).toHaveLength(1);
+    expect(JSON.parse(ldScripts()[0].textContent ?? '').itemListElement[0].position).toBe(3);
+
+    hs.destroy();
+    expect(ldScripts()).toHaveLength(0);
+  });
+
+  it('is absent for empty results, errors and queries without criterion', async () => {
+    const calls = controlFetch();
+    const hs = new HalSearch({ container, structuredData: true });
+    const p = hs.search({ query: 'x' });
+    calls[0].resolve(titled(['a']));
+    await p;
+    expect(ldScripts()).toHaveLength(1);
+
+    const empty = hs.search({ query: 'nothing' });
+    calls[1].resolve(titled([]));
+    await empty;
+    expect(ldScripts()).toHaveLength(0);
+
+    const failing = hs.search({ query: 'y' });
+    calls[2].reject(new Error('HTTP 500'));
+    await failing;
+    expect(ldScripts()).toHaveLength(0);
+
+    await hs.search({ query: {} });
+    expect(ldScripts()).toHaveLength(0);
+  });
+
+  it('goes to the shadow host (light DOM) when the container lives in a shadow root, SVG output included', async () => {
+    const calls = controlFetch();
+    const host = document.createElement('section');
+    document.body.appendChild(host);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const inner = document.createElement('div');
+    shadow.appendChild(inner);
+    const hs = new HalSearch({ container: inner, output: 'svg', structuredData: true });
+    const p = hs.search({ query: 'x' });
+    calls[0].resolve(titled(['a']));
+    await p;
+
+    expect(ldScripts(shadow)).toHaveLength(0);
+    expect(ldScripts(host)).toHaveLength(1);
+    expect(ldScripts()[0].parentNode).toBe(host);
+
+    // Re-rendering the SVG (new colors) keeps a single, up-to-date description.
+    hs.setColors({ mainColor: '#123456' });
+    expect(ldScripts(host)).toHaveLength(1);
+    hs.destroy();
+    expect(ldScripts(host)).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Callbacks (B4)
 // ---------------------------------------------------------------------------
 
