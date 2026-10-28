@@ -3,44 +3,62 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>hal-search embed</title>
+    <title>Publications from HAL</title>
     <style>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { margin: 0; background: transparent; }
       body {
-        font-family: system-ui, -apple-system, sans-serif;
-        background: transparent;
+        padding: 8px;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        /* Text outside the cards (group headings, credit) inherits this color. */
+        color: #1a1a1a;
       }
-      #hal-embed { padding: 8px; }
+      body[data-theme="dark"] { color: #e6edf3; }
+      @media (prefers-color-scheme: dark) {
+        body[data-theme="auto"] { color: #e6edf3; }
+      }
+      .notice { margin: 0; padding: 16px; border: 1px dashed currentColor; border-radius: 6px; font-size: 0.95rem; }
+      .notice code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
     </style>
   </head>
   <body>
-    <div id="hal-embed"></div>
+    <div id="publications"></div>
+    <p class="notice" id="notice" hidden>
+      Nothing to show yet: add <code>idHal</code>, <code>orcid</code>, <code>collection</code>, <code>structId</code>,
+      <code>search</code> or <code>q</code> to this page's address, for example <code>embed.html?idHal=jdupont</code>.
+    </p>
 
     <script type="module">
-      import { HalSearch } from './hal-search.es.js';
+      import { HalSearch, hasQueryCriterion, parseUrlParams } from './hal-search.es.js';
 
-      // ── Read configuration from URL parameters ──
-      const params = new URLSearchParams(window.location.search);
-      const uid    = params.get('uid')  || '*:*';
-      const lvl    = Math.min(3, Math.max(0, parseInt(params.get('lvl') || '1', 10)));
-      const rows   = Math.min(50, Math.max(1, parseInt(params.get('rows') || '10', 10)));
-      const type   = params.get('type') === 'svg' ? 'svg' : 'html';
+      // Same public URL scheme as the web component and the SVG service. Legacy `uid` (raw query)
+      // and `type` (output) still work; invalid values are dropped by parseUrlParams.
+      const state = parseUrlParams(new URLSearchParams(location.search));
+      document.body.dataset.theme = state.theme ?? 'light';
+      if (state.title) document.title = state.title;
 
-      const bg   = params.get('bg')   || undefined;
-      const text = params.get('text') || undefined;
-      const main = params.get('main') || undefined;
-
-      const hs = new HalSearch({
-        container: '#hal-embed',
-        lvl,
-        rows,
-        output: type,
-        backgroundColor: bg,
-        textColor: text,
-        mainColor: main,
-      });
-
-      hs.search({ uid });
+      if (!hasQueryCriterion(state.query)) {
+        // Never fall back to the whole archive.
+        document.getElementById('notice').hidden = false;
+      } else {
+        const hs = new HalSearch({
+          container: '#publications',
+          output: state.output,
+          lvl: state.lvl,
+          rows: state.rows,
+          sort: state.sort,
+          filters: state.filters,
+          theme: state.theme,
+          backgroundColor: state.backgroundColor,
+          textColor: state.textColor,
+          mainColor: state.mainColor,
+          groupBy: state.groupBy,
+          highlightAuthors: state.highlightAuthors,
+          maxAuthors: state.maxAuthors,
+          showCredit: state.showCredit,
+          title: state.title,
+        });
+        hs.search({ query: state.query, page: state.page });
+      }
     </script>
   </body>
 </html>

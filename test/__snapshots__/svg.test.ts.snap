@@ -1,0 +1,184 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renderSvg — snapshots > lvl 0 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="326" viewBox="0 0 800 326" role="img" class="hal-svg hal-svg-hmcxuc">
+<title>Publications – 1,234 results</title>
+<desc>ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs
+ConVer-G: Concurrent versioning of knowledge graphs
+Condensed Representation for Snapshot-Based RDF Graphs</desc>
+<style>.hal-svg-hmcxuc text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif}.hal-svg-hmcxuc a:hover text,.hal-svg-hmcxuc a:focus text{text-decoration:underline}.hal-svg-hmcxuc .hal-bg{fill:#f6f8fa;stroke:#e0e0e0}.hal-svg-hmcxuc .hal-head{fill:#0052cc}.hal-svg-hmcxuc .hal-head-text{fill:#ffffff}.hal-svg-hmcxuc .hal-card{fill:#ffffff;stroke:#e0e0e0}.hal-svg-hmcxuc .hal-rule{fill:#e0e0e0}.hal-svg-hmcxuc .hal-text{fill:#1a1a1a}.hal-svg-hmcxuc .hal-muted{fill:#666666}.hal-svg-hmcxuc .hal-link{fill:#0052cc}.hal-svg-hmcxuc a:hover .hal-link,.hal-svg-hmcxuc a:focus .hal-link{fill:#003d99}.hal-svg-hmcxuc .hal-tag{fill:#f0f0f0}.hal-svg-hmcxuc .hal-tag-text{fill:#444444}.hal-svg-hmcxuc .hal-domain{fill:#e8f0fe}.hal-svg-hmcxuc .hal-domain-text{fill:#1a56c4}.hal-svg-hmcxuc .hal-oa{fill:#e3f5ee}.hal-svg-hmcxuc .hal-oa-text{fill:#006644}.hal-svg-hmcxuc .hal-error{fill:#fff5f5;stroke:#ffc9c9}.hal-svg-hmcxuc .hal-error-text{fill:#c92a2a}.hal-svg-hmcxuc .hal-error-icon{fill:#c92a2a}.hal-svg-hmcxuc .hal-error-icon-text{fill:#fff5f5}</style>
+<rect x="0.5" y="0.5" width="799" height="325" rx="10" class="hal-bg"/>
+<path d="M0 52V10A10 10 0 0 1 10 0H790A10 10 0 0 1 800 10V52Z" class="hal-head"/>
+<a href="https://cv.hal.science/jpugetgil" target="_blank" rel="noopener noreferrer"><text x="16" y="32.3" class="hal-head-text" font-size="18" font-weight="700">Publications</text></a>
+<text x="784" y="30.6" class="hal-head-text" font-size="13" text-anchor="end">1,234 results</text>
+<svg x="16" y="68" width="768" height="85" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="84" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-05726064v1" target="_blank" rel="noopener noreferrer"><text x="0" y="14.1" class="hal-text" font-size="13">Jey Puget Gil, Emmanuel Coquery, John Samuel, Gilles Gesquière. ConVer-G: A Suite for Versioning, Querying and</text><text x="0" y="33.1" class="hal-text" font-size="13">Visualization of Dynamic Knowledge Graphs. Journal of Open Source Software, 2026, 11 (124), pp.10828.</text><text x="0" y="52.1" class="hal-text" font-size="13">⟨10.21105/joss.10828⟩. ⟨hal-05726064⟩</text></a>
+</g>
+</svg>
+<svg x="16" y="163" width="768" height="66" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="65" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-04690144v1" target="_blank" rel="noopener noreferrer"><text x="0" y="14.1" class="hal-text" font-size="13">Jey PUGET GIL, Emmanuel Coquery. ConVer-G: Concurrent versioning of knowledge graphs. BDA, Oct 2024, Orléans,</text><text x="0" y="33.1" class="hal-text" font-size="13">France.</text></a>
+</g>
+</svg>
+<svg x="16" y="239" width="768" height="47" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="46" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-05175454v3" target="_blank" rel="noopener noreferrer"><text x="0" y="14.1" class="hal-text" font-size="13">Jey Puget Gil. Condensed Representation for Snapshot-Based RDF Graphs. 2025.</text></a>
+</g>
+</svg>
+<a href="https://github.com/JPugetGil/hal-search" target="_blank" rel="noopener noreferrer"><text x="784" y="310.2" class="hal-muted" font-size="12" text-anchor="end">hal-search</text></a>
+<a href="https://cv.hal.science/jpugetgil" target="_blank" rel="noopener noreferrer"><text x="16" y="310.2" class="hal-link" font-size="12">View all 1,234 publications on HAL</text></a>
+</svg>"
+`;
+
+exports[`renderSvg — snapshots > lvl 1 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="404" viewBox="0 0 800 404" role="img" class="hal-svg hal-svg-1awob1h">
+<title>Publications – 1,234 results</title>
+<desc>ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs
+ConVer-G: Concurrent versioning of knowledge graphs
+Condensed Representation for Snapshot-Based RDF Graphs</desc>
+<style>.hal-svg-1awob1h text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif}.hal-svg-1awob1h a:hover text,.hal-svg-1awob1h a:focus text{text-decoration:underline}.hal-svg-1awob1h .hal-bg{fill:#f6f8fa;stroke:#e0e0e0}.hal-svg-1awob1h .hal-head{fill:#0052cc}.hal-svg-1awob1h .hal-head-text{fill:#ffffff}.hal-svg-1awob1h .hal-card{fill:#ffffff;stroke:#e0e0e0}.hal-svg-1awob1h .hal-rule{fill:#e0e0e0}.hal-svg-1awob1h .hal-text{fill:#1a1a1a}.hal-svg-1awob1h .hal-muted{fill:#666666}.hal-svg-1awob1h .hal-link{fill:#0052cc}.hal-svg-1awob1h a:hover .hal-link,.hal-svg-1awob1h a:focus .hal-link{fill:#003d99}.hal-svg-1awob1h .hal-tag{fill:#f0f0f0}.hal-svg-1awob1h .hal-tag-text{fill:#444444}.hal-svg-1awob1h .hal-domain{fill:#e8f0fe}.hal-svg-1awob1h .hal-domain-text{fill:#1a56c4}.hal-svg-1awob1h .hal-oa{fill:#e3f5ee}.hal-svg-1awob1h .hal-oa-text{fill:#006644}.hal-svg-1awob1h .hal-error{fill:#fff5f5;stroke:#ffc9c9}.hal-svg-1awob1h .hal-error-text{fill:#c92a2a}.hal-svg-1awob1h .hal-error-icon{fill:#c92a2a}.hal-svg-1awob1h .hal-error-icon-text{fill:#fff5f5}@media (prefers-color-scheme:dark){.hal-svg-1awob1h .hal-bg{fill:#0d1117;stroke:#30363d}.hal-svg-1awob1h .hal-head{fill:#4493f8}.hal-svg-1awob1h .hal-head-text{fill:#0d1117}.hal-svg-1awob1h .hal-card{fill:#161b22;stroke:#30363d}.hal-svg-1awob1h .hal-rule{fill:#30363d}.hal-svg-1awob1h .hal-text{fill:#e6edf3}.hal-svg-1awob1h .hal-muted{fill:#8b949e}.hal-svg-1awob1h .hal-link{fill:#4493f8}.hal-svg-1awob1h a:hover .hal-link,.hal-svg-1awob1h a:focus .hal-link{fill:#69a9f9}.hal-svg-1awob1h .hal-tag{fill:#21262d}.hal-svg-1awob1h .hal-tag-text{fill:#c9d1d9}.hal-svg-1awob1h .hal-domain{fill:#1b2d45}.hal-svg-1awob1h .hal-domain-text{fill:#79b8ff}.hal-svg-1awob1h .hal-oa{fill:#173326}.hal-svg-1awob1h .hal-oa-text{fill:#3fb950}.hal-svg-1awob1h .hal-error{fill:#2d1517;stroke:#6e2b2b}.hal-svg-1awob1h .hal-error-text{fill:#ff7b72}.hal-svg-1awob1h .hal-error-icon{fill:#ff7b72}.hal-svg-1awob1h .hal-error-icon-text{fill:#2d1517}}</style>
+<rect x="0.5" y="0.5" width="799" height="403" rx="10" class="hal-bg"/>
+<path d="M0 52V10A10 10 0 0 1 10 0H790A10 10 0 0 1 800 10V52Z" class="hal-head"/>
+<a href="https://cv.hal.science/jpugetgil" target="_blank" rel="noopener noreferrer"><text x="16" y="32.3" class="hal-head-text" font-size="18" font-weight="700">Publications</text></a>
+<text x="784" y="30.6" class="hal-head-text" font-size="13" text-anchor="end">1,234 results</text>
+<svg x="16" y="68" width="768" height="92" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="91" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-05726064v1" target="_blank" rel="noopener noreferrer"><text x="0" y="15.3" class="hal-link" font-size="15" font-weight="700">ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs</text></a>
+<text x="0" y="35.6" class="hal-text" font-size="13"><tspan font-weight="700">Jey Puget Gil</tspan>, Emmanuel Coquery, John Samuel, Gilles Gesquière</text>
+<rect x="0" y="43" width="91.9" height="20" rx="10" class="hal-tag"/><text x="45.9" y="57" class="hal-tag-text" font-size="11.5" text-anchor="middle">Journal article</text>
+<text x="99.9" y="57.4" class="hal-muted" font-size="12.5">2026 · Journal of Open Source Software</text>
+</g>
+</svg>
+<svg x="16" y="170" width="768" height="92" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="91" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-04690144v1" target="_blank" rel="noopener noreferrer"><text x="0" y="15.3" class="hal-link" font-size="15" font-weight="700">ConVer-G: Concurrent versioning of knowledge graphs</text></a>
+<text x="0" y="35.6" class="hal-text" font-size="13"><tspan font-weight="700">Jey PUGET GIL</tspan>, Emmanuel Coquery</text>
+<rect x="0" y="43" width="113.6" height="20" rx="10" class="hal-tag"/><text x="56.8" y="57" class="hal-tag-text" font-size="11.5" text-anchor="middle">Conference paper</text>
+<text x="121.6" y="57.4" class="hal-muted" font-size="12.5">2024 · 40ème conférence sur la gestion des données (BDA)</text>
+</g>
+</svg>
+<svg x="16" y="272" width="768" height="92" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="91" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-05175454v3" target="_blank" rel="noopener noreferrer"><text x="0" y="15.3" class="hal-link" font-size="15" font-weight="700">Condensed Representation for Snapshot-Based RDF Graphs</text></a>
+<text x="0" y="35.6" class="hal-text" font-size="13">Jey Puget Gil</text>
+<text x="0" y="57.4" class="hal-muted" font-size="12.5">2025</text>
+</g>
+</svg>
+<a href="https://github.com/JPugetGil/hal-search" target="_blank" rel="noopener noreferrer"><text x="784" y="388.2" class="hal-muted" font-size="12" text-anchor="end">hal-search</text></a>
+<a href="https://cv.hal.science/jpugetgil" target="_blank" rel="noopener noreferrer"><text x="16" y="388.2" class="hal-link" font-size="12">View all 1,234 publications on HAL</text></a>
+</svg>"
+`;
+
+exports[`renderSvg — snapshots > lvl 2 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="456" viewBox="0 0 800 456" role="img" class="hal-svg hal-svg-hmcxuc">
+<title>Publications – 1,234 results</title>
+<desc>ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs
+ConVer-G: Concurrent versioning of knowledge graphs
+Condensed Representation for Snapshot-Based RDF Graphs</desc>
+<style>.hal-svg-hmcxuc text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif}.hal-svg-hmcxuc a:hover text,.hal-svg-hmcxuc a:focus text{text-decoration:underline}.hal-svg-hmcxuc .hal-bg{fill:#f6f8fa;stroke:#e0e0e0}.hal-svg-hmcxuc .hal-head{fill:#0052cc}.hal-svg-hmcxuc .hal-head-text{fill:#ffffff}.hal-svg-hmcxuc .hal-card{fill:#ffffff;stroke:#e0e0e0}.hal-svg-hmcxuc .hal-rule{fill:#e0e0e0}.hal-svg-hmcxuc .hal-text{fill:#1a1a1a}.hal-svg-hmcxuc .hal-muted{fill:#666666}.hal-svg-hmcxuc .hal-link{fill:#0052cc}.hal-svg-hmcxuc a:hover .hal-link,.hal-svg-hmcxuc a:focus .hal-link{fill:#003d99}.hal-svg-hmcxuc .hal-tag{fill:#f0f0f0}.hal-svg-hmcxuc .hal-tag-text{fill:#444444}.hal-svg-hmcxuc .hal-domain{fill:#e8f0fe}.hal-svg-hmcxuc .hal-domain-text{fill:#1a56c4}.hal-svg-hmcxuc .hal-oa{fill:#e3f5ee}.hal-svg-hmcxuc .hal-oa-text{fill:#006644}.hal-svg-hmcxuc .hal-error{fill:#fff5f5;stroke:#ffc9c9}.hal-svg-hmcxuc .hal-error-text{fill:#c92a2a}.hal-svg-hmcxuc .hal-error-icon{fill:#c92a2a}.hal-svg-hmcxuc .hal-error-icon-text{fill:#fff5f5}</style>
+<rect x="0.5" y="0.5" width="799" height="455" rx="10" class="hal-bg"/>
+<path d="M0 52V10A10 10 0 0 1 10 0H790A10 10 0 0 1 800 10V52Z" class="hal-head"/>
+<a href="https://cv.hal.science/jpugetgil" target="_blank" rel="noopener noreferrer"><text x="16" y="32.3" class="hal-head-text" font-size="18" font-weight="700">Publications</text></a>
+<text x="784" y="30.6" class="hal-head-text" font-size="13" text-anchor="end">1,234 results</text>
+<svg x="16" y="68" width="768" height="118" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="117" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-05726064v1" target="_blank" rel="noopener noreferrer"><text x="0" y="15.3" class="hal-link" font-size="15" font-weight="700">ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs</text></a>
+<text x="0" y="35.6" class="hal-text" font-size="13"><tspan font-weight="700">Jey Puget Gil</tspan>, Emmanuel Coquery, John Samuel, Gilles Gesquière</text>
+<rect x="0" y="43" width="91.9" height="20" rx="10" class="hal-tag"/><text x="45.9" y="57" class="hal-tag-text" font-size="11.5" text-anchor="middle">Journal article</text>
+<rect x="97.9" y="43" width="88.5" height="20" rx="10" class="hal-oa"/><text x="142.1" y="57" class="hal-oa-text" font-size="11.5" text-anchor="middle">Open Access</text>
+<text x="194.4" y="57.4" class="hal-muted" font-size="12.5">2026 · Journal of Open Source Software</text>
+<rect x="0" y="69" width="116.9" height="20" rx="10" class="hal-domain"/><text x="58.5" y="83" class="hal-domain-text" font-size="11.5" text-anchor="middle">Databases [cs.DB]</text>
+<rect x="122.9" y="69" width="92.6" height="20" rx="10" class="hal-tag"/><text x="169.2" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">Semantic web</text>
+<rect x="221.5" y="69" width="65.5" height="20" rx="10" class="hal-tag"/><text x="254.2" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">SPARQL</text>
+<rect x="293" y="69" width="41.1" height="20" rx="10" class="hal-tag"/><text x="313.5" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">RDF</text>
+<rect x="340" y="69" width="110.9" height="20" rx="10" class="hal-tag"/><text x="395.4" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">Knowledge graph</text>
+</g>
+</svg>
+<svg x="16" y="196" width="768" height="118" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="117" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-04690144v1" target="_blank" rel="noopener noreferrer"><text x="0" y="15.3" class="hal-link" font-size="15" font-weight="700">ConVer-G: Concurrent versioning of knowledge graphs</text></a>
+<text x="0" y="35.6" class="hal-text" font-size="13"><tspan font-weight="700">Jey PUGET GIL</tspan>, Emmanuel Coquery</text>
+<rect x="0" y="43" width="113.6" height="20" rx="10" class="hal-tag"/><text x="56.8" y="57" class="hal-tag-text" font-size="11.5" text-anchor="middle">Conference paper</text>
+<text x="121.6" y="57.4" class="hal-muted" font-size="12.5">2024 · 40ème conférence sur la gestion des données (BDA)</text>
+<rect x="0" y="69" width="49.9" height="20" rx="10" class="hal-tag"/><text x="24.9" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">Graph</text>
+<rect x="55.9" y="69" width="41.1" height="20" rx="10" class="hal-tag"/><text x="76.4" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">RDF</text>
+<rect x="102.9" y="69" width="73.6" height="20" rx="10" class="hal-tag"/><text x="139.7" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">Versioning</text>
+</g>
+</svg>
+<svg x="16" y="324" width="768" height="92" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="91" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-05175454v3" target="_blank" rel="noopener noreferrer"><text x="0" y="15.3" class="hal-link" font-size="15" font-weight="700">Condensed Representation for Snapshot-Based RDF Graphs</text></a>
+<text x="0" y="35.6" class="hal-text" font-size="13">Jey Puget Gil</text>
+<text x="0" y="57.4" class="hal-muted" font-size="12.5">2025</text>
+</g>
+</svg>
+<a href="https://github.com/JPugetGil/hal-search" target="_blank" rel="noopener noreferrer"><text x="784" y="440.2" class="hal-muted" font-size="12" text-anchor="end">hal-search</text></a>
+<a href="https://cv.hal.science/jpugetgil" target="_blank" rel="noopener noreferrer"><text x="16" y="440.2" class="hal-link" font-size="12">View all 1,234 publications on HAL</text></a>
+</svg>"
+`;
+
+exports[`renderSvg — snapshots > lvl 3 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="541" viewBox="0 0 800 541" role="img" class="hal-svg hal-svg-1awob1h">
+<title>Publications – 1,234 results</title>
+<desc>ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs
+ConVer-G: Concurrent versioning of knowledge graphs
+Condensed Representation for Snapshot-Based RDF Graphs</desc>
+<style>.hal-svg-1awob1h text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif}.hal-svg-1awob1h a:hover text,.hal-svg-1awob1h a:focus text{text-decoration:underline}.hal-svg-1awob1h .hal-bg{fill:#f6f8fa;stroke:#e0e0e0}.hal-svg-1awob1h .hal-head{fill:#0052cc}.hal-svg-1awob1h .hal-head-text{fill:#ffffff}.hal-svg-1awob1h .hal-card{fill:#ffffff;stroke:#e0e0e0}.hal-svg-1awob1h .hal-rule{fill:#e0e0e0}.hal-svg-1awob1h .hal-text{fill:#1a1a1a}.hal-svg-1awob1h .hal-muted{fill:#666666}.hal-svg-1awob1h .hal-link{fill:#0052cc}.hal-svg-1awob1h a:hover .hal-link,.hal-svg-1awob1h a:focus .hal-link{fill:#003d99}.hal-svg-1awob1h .hal-tag{fill:#f0f0f0}.hal-svg-1awob1h .hal-tag-text{fill:#444444}.hal-svg-1awob1h .hal-domain{fill:#e8f0fe}.hal-svg-1awob1h .hal-domain-text{fill:#1a56c4}.hal-svg-1awob1h .hal-oa{fill:#e3f5ee}.hal-svg-1awob1h .hal-oa-text{fill:#006644}.hal-svg-1awob1h .hal-error{fill:#fff5f5;stroke:#ffc9c9}.hal-svg-1awob1h .hal-error-text{fill:#c92a2a}.hal-svg-1awob1h .hal-error-icon{fill:#c92a2a}.hal-svg-1awob1h .hal-error-icon-text{fill:#fff5f5}@media (prefers-color-scheme:dark){.hal-svg-1awob1h .hal-bg{fill:#0d1117;stroke:#30363d}.hal-svg-1awob1h .hal-head{fill:#4493f8}.hal-svg-1awob1h .hal-head-text{fill:#0d1117}.hal-svg-1awob1h .hal-card{fill:#161b22;stroke:#30363d}.hal-svg-1awob1h .hal-rule{fill:#30363d}.hal-svg-1awob1h .hal-text{fill:#e6edf3}.hal-svg-1awob1h .hal-muted{fill:#8b949e}.hal-svg-1awob1h .hal-link{fill:#4493f8}.hal-svg-1awob1h a:hover .hal-link,.hal-svg-1awob1h a:focus .hal-link{fill:#69a9f9}.hal-svg-1awob1h .hal-tag{fill:#21262d}.hal-svg-1awob1h .hal-tag-text{fill:#c9d1d9}.hal-svg-1awob1h .hal-domain{fill:#1b2d45}.hal-svg-1awob1h .hal-domain-text{fill:#79b8ff}.hal-svg-1awob1h .hal-oa{fill:#173326}.hal-svg-1awob1h .hal-oa-text{fill:#3fb950}.hal-svg-1awob1h .hal-error{fill:#2d1517;stroke:#6e2b2b}.hal-svg-1awob1h .hal-error-text{fill:#ff7b72}.hal-svg-1awob1h .hal-error-icon{fill:#ff7b72}.hal-svg-1awob1h .hal-error-icon-text{fill:#2d1517}}</style>
+<rect x="0.5" y="0.5" width="799" height="540" rx="10" class="hal-bg"/>
+<path d="M0 52V10A10 10 0 0 1 10 0H790A10 10 0 0 1 800 10V52Z" class="hal-head"/>
+<a href="https://cv.hal.science/jpugetgil" target="_blank" rel="noopener noreferrer"><text x="16" y="32.3" class="hal-head-text" font-size="18" font-weight="700">Publications</text></a>
+<text x="784" y="30.6" class="hal-head-text" font-size="13" text-anchor="end">1,234 results</text>
+<svg x="16" y="68" width="768" height="203" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="202" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-05726064v1" target="_blank" rel="noopener noreferrer"><text x="0" y="15.3" class="hal-link" font-size="15" font-weight="700">ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs</text></a>
+<text x="0" y="35.6" class="hal-text" font-size="13"><tspan font-weight="700">Jey Puget Gil</tspan>, Emmanuel Coquery, John Samuel, Gilles Gesquière</text>
+<rect x="0" y="43" width="91.9" height="20" rx="10" class="hal-tag"/><text x="45.9" y="57" class="hal-tag-text" font-size="11.5" text-anchor="middle">Journal article</text>
+<rect x="97.9" y="43" width="88.5" height="20" rx="10" class="hal-oa"/><text x="142.1" y="57" class="hal-oa-text" font-size="11.5" text-anchor="middle">Open Access</text>
+<text x="194.4" y="57.4" class="hal-muted" font-size="12.5">2026 · Journal of Open Source Software</text>
+<rect x="0" y="69" width="116.9" height="20" rx="10" class="hal-domain"/><text x="58.5" y="83" class="hal-domain-text" font-size="11.5" text-anchor="middle">Databases [cs.DB]</text>
+<rect x="122.9" y="69" width="92.6" height="20" rx="10" class="hal-tag"/><text x="169.2" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">Semantic web</text>
+<rect x="221.5" y="69" width="65.5" height="20" rx="10" class="hal-tag"/><text x="254.2" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">SPARQL</text>
+<rect x="293" y="69" width="41.1" height="20" rx="10" class="hal-tag"/><text x="313.5" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">RDF</text>
+<rect x="340" y="69" width="110.9" height="20" rx="10" class="hal-tag"/><text x="395.4" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">Knowledge graph</text>
+<rect x="0" y="98" width="736" height="1" class="hal-rule"/>
+<text x="0" y="117" class="hal-muted" font-size="11.5" font-weight="700">Abstract</text>
+<text x="0" y="134.4" class="hal-text" font-size="12.5">A Knowledge Graph (KG) is a structured representation of facts where entities are connected by typed relationships, typically</text>
+<text x="0" y="152.4" class="hal-text" font-size="12.5">encoded using the Resource Description Framework (RDF) standard. KGs are widely used across domains such as life</text>
+<text x="0" y="170.4" class="hal-text" font-size="12.5">sciences, urban planning, and weather forecasting, but evolve continuously as data is updated, corrected, and expanded…</text>
+</g>
+</svg>
+<svg x="16" y="281" width="768" height="118" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="117" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-04690144v1" target="_blank" rel="noopener noreferrer"><text x="0" y="15.3" class="hal-link" font-size="15" font-weight="700">ConVer-G: Concurrent versioning of knowledge graphs</text></a>
+<text x="0" y="35.6" class="hal-text" font-size="13"><tspan font-weight="700">Jey PUGET GIL</tspan>, Emmanuel Coquery</text>
+<rect x="0" y="43" width="113.6" height="20" rx="10" class="hal-tag"/><text x="56.8" y="57" class="hal-tag-text" font-size="11.5" text-anchor="middle">Conference paper</text>
+<text x="121.6" y="57.4" class="hal-muted" font-size="12.5">2024 · 40ème conférence sur la gestion des données (BDA)</text>
+<rect x="0" y="69" width="49.9" height="20" rx="10" class="hal-tag"/><text x="24.9" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">Graph</text>
+<rect x="55.9" y="69" width="41.1" height="20" rx="10" class="hal-tag"/><text x="76.4" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">RDF</text>
+<rect x="102.9" y="69" width="73.6" height="20" rx="10" class="hal-tag"/><text x="139.7" y="83" class="hal-tag-text" font-size="11.5" text-anchor="middle">Versioning</text>
+</g>
+</svg>
+<svg x="16" y="409" width="768" height="92" overflow="hidden">
+<rect x="0.5" y="0.5" width="767" height="91" rx="6" class="hal-card"/>
+<g transform="translate(16 14)">
+<a href="https://hal.science/hal-05175454v3" target="_blank" rel="noopener noreferrer"><text x="0" y="15.3" class="hal-link" font-size="15" font-weight="700">Condensed Representation for Snapshot-Based RDF Graphs</text></a>
+<text x="0" y="35.6" class="hal-text" font-size="13">Jey Puget Gil</text>
+<text x="0" y="57.4" class="hal-muted" font-size="12.5">2025</text>
+</g>
+</svg>
+<a href="https://github.com/JPugetGil/hal-search" target="_blank" rel="noopener noreferrer"><text x="784" y="525.2" class="hal-muted" font-size="12" text-anchor="end">hal-search</text></a>
+<a href="https://cv.hal.science/jpugetgil" target="_blank" rel="noopener noreferrer"><text x="16" y="525.2" class="hal-link" font-size="12">View all 1,234 publications on HAL</text></a>
+</svg>"
+`;

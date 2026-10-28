@@ -3,491 +3,971 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>hal-search — Example</title>
+    <title>hal-search configurator</title>
+    <meta
+      name="description"
+      content="Build a publication list from the HAL open archive for a GitHub README or a website: live preview and copy-paste snippets."
+    />
     <style>
-      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        color-scheme: light dark;
+        --page-bg: #f3f5f8;
+        --panel-bg: #ffffff;
+        --text: #1a1a2e;
+        --muted: #59636e;
+        --border: #d0d7de;
+        --accent: #0052cc;
+        --accent-hover: #003d99;
+        --accent-text: #ffffff;
+        --code-bg: #f6f8fa;
+        --error: #b42318;
+        --note-bg: #fff8e5;
+        --note-border: #f0d999;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page-bg: #010409;
+          --panel-bg: #0d1117;
+          --text: #e6edf3;
+          --muted: #9198a1;
+          --border: #3d444d;
+          --accent: #4493f8;
+          --accent-hover: #69a9f9;
+          --accent-text: #0d1117;
+          --code-bg: #161b22;
+          --error: #ff7b72;
+          --note-bg: #272115;
+          --note-border: #6c5a2a;
+        }
+      }
+
+      *, *::before, *::after { box-sizing: border-box; }
 
       body {
-        font-family: system-ui, -apple-system, sans-serif;
-        background: #f0f4f8;
-        color: #1a1a2e;
-        min-height: 100vh;
+        margin: 0;
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--page-bg);
+        color: var(--text);
       }
 
-      /* ── Header ─────────────────────────────── */
+      a { color: var(--accent); }
+
+      .skip {
+        position: absolute;
+        left: 8px;
+        top: -48px;
+        padding: 8px 12px;
+        background: var(--accent);
+        color: var(--accent-text);
+        border-radius: 6px;
+        z-index: 10;
+      }
+      .skip:focus { top: 8px; }
+
+      .visually-hidden {
+        position: absolute !important;
+        width: 1px; height: 1px;
+        margin: -1px; padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* Header */
       .site-header {
         background: #0052cc;
-        color: #fff;
-        padding: 28px 32px 24px;
+        color: #ffffff;
+        padding: 24px 16px;
+      }
+      .site-header > div { max-width: 1280px; margin: 0 auto; }
+      .site-header h1 { margin: 0 0 4px; font-size: 1.5rem; line-height: 1.25; }
+      .site-header p { margin: 0; opacity: 0.92; }
+      .site-header a { color: #ffffff; }
+
+      /* Layout */
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+      @media (min-width: 960px) {
+        .layout { grid-template-columns: 360px minmax(0, 1fr); align-items: start; }
+        .config { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; }
       }
 
-      .site-header h1 {
-        font-size: 1.6rem;
+      .panel {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      h2 { font-size: 1.15rem; margin: 0 0 12px; }
+      h3 { font-size: 1rem; margin: 0; }
+
+      /* Form */
+      fieldset {
+        border: 0;
+        margin: 0 0 20px;
+        padding: 0;
+        min-width: 0;
+      }
+      legend {
+        font-size: 0.78rem;
         font-weight: 700;
-        letter-spacing: -0.02em;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 0;
+        margin-bottom: 8px;
+      }
+      fieldset fieldset { margin: 4px 0 12px; }
+      fieldset fieldset legend {
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text);
         margin-bottom: 4px;
       }
 
-      .site-header p {
-        font-size: 0.92rem;
-        opacity: 0.85;
-      }
+      .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+      .field > label { font-size: 0.9rem; font-weight: 600; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .row .field { margin-bottom: 12px; }
 
-      /* ── Layout ─────────────────────────────── */
-      .layout {
-        display: grid;
-        grid-template-columns: 300px 1fr;
-        gap: 0;
-        max-width: 1200px;
-        margin: 0 auto;
-        min-height: calc(100vh - 88px);
-      }
-
-      /* ── Sidebar ─────────────────────────────── */
-      .sidebar {
-        background: #fff;
-        border-right: 1px solid #e0e4ea;
-        padding: 24px 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-      }
-
-      .sidebar section { display: flex; flex-direction: column; gap: 10px; }
-
-      .sidebar h2 {
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #888;
-        margin-bottom: 2px;
-      }
-
-      .sidebar label {
-        font-size: 0.85rem;
-        color: #444;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        font-weight: 500;
-      }
-
-      .sidebar input[type="color"] {
-        width: 40px;
-        height: 32px;
-        padding: 2px;
-        border: 1px solid #d0d4da;
+      input[type="text"], input[type="number"], select {
+        width: 100%;
+        min-height: 40px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
         border-radius: 6px;
-        cursor: pointer;
-        background: #fafafa;
+        background: var(--panel-bg);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.95rem;
       }
+      input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible, pre:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      input[aria-invalid="true"] { border-color: var(--error); }
 
-      .color-row {
-        display: flex;
+      .hint { margin: 0; font-size: 0.82rem; color: var(--muted); }
+      .error { margin: 0; font-size: 0.85rem; color: var(--error); font-weight: 600; }
+      .error:empty { display: none; }
+
+      .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+      .check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.9rem; min-height: 28px; }
+      .check input { margin: 3px 0 0; width: 18px; height: 18px; flex: none; accent-color: var(--accent); }
+
+      .color {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
         align-items: center;
         gap: 8px;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+      }
+      .color input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+      .color input[type="color"] {
+        width: 48px; height: 36px; padding: 2px;
+        border: 1px solid var(--border); border-radius: 6px;
+        background: var(--panel-bg); cursor: pointer;
       }
 
-      .color-row label {
-        flex: 1;
-        font-size: 0.82rem;
-      }
-
-      .color-hex {
-        font-family: monospace;
-        font-size: 0.78rem;
-        color: #888;
-        min-width: 60px;
-      }
-
-      .sidebar input[type="text"],
-      .sidebar input[type="number"],
-      .sidebar select {
-        padding: 8px 10px;
-        border: 1px solid #d0d4da;
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 36px;
+        padding: 6px 14px;
+        border: 1px solid var(--accent);
         border-radius: 6px;
-        font-size: 0.88rem;
-        width: 100%;
-        background: #fafafa;
-        color: #1a1a2e;
-        transition: border-color 0.15s;
-      }
-
-      .sidebar input:focus,
-      .sidebar select:focus {
-        outline: none;
-        border-color: #0052cc;
-        background: #fff;
-      }
-
-      .search-btn {
-        width: 100%;
-        padding: 10px;
-        background: #0052cc;
-        color: #fff;
-        border: none;
-        border-radius: 6px;
+        background: var(--accent);
+        color: var(--accent-text);
+        font: inherit;
         font-size: 0.9rem;
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.15s;
+        text-decoration: none;
       }
+      .button:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+      .button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .button--ghost { background: transparent; color: var(--accent); }
+      .button--ghost:hover { background: var(--code-bg); color: var(--accent-hover); }
 
-      .search-btn:hover { background: #003d99; }
-      .search-btn:active { background: #002b75; }
-
-      /* Level descriptions */
-      .level-desc {
-        font-size: 0.78rem;
-        color: #666;
-        background: #f5f7fa;
-        border-radius: 5px;
-        padding: 8px 10px;
-        line-height: 1.5;
+      /* Preview */
+      .status { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; min-height: 1.5em; }
+      .preview {
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        padding: 12px;
+        background: #ffffff;
+        color: #1a1a1a;
       }
-
-      .level-desc strong { color: #0052cc; display: block; margin-bottom: 2px; }
-
-      /* Quick-search chips */
-      .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-
-      .chip {
-        padding: 4px 10px;
-        border: 1px solid #d0d4da;
-        border-radius: 20px;
-        font-size: 0.78rem;
-        cursor: pointer;
-        background: #fff;
-        color: #444;
-        transition: all 0.12s;
+      .preview[data-theme="dark"] { background: #0d1117; color: #e6edf3; }
+      @media (prefers-color-scheme: dark) {
+        .preview[data-theme="auto"] { background: #0d1117; color: #e6edf3; }
       }
+      .preview svg { max-width: 100%; height: auto; }
+      .preview-empty { margin: 0; padding: 16px; text-align: center; color: inherit; }
 
-      .chip:hover {
-        border-color: #0052cc;
-        color: #0052cc;
-        background: #f0f4ff;
-      }
-
-      /* ── Main content ─────────────────────────── */
-      .main {
-        padding: 28px 28px;
-        overflow-y: auto;
-      }
-
-      .main-header {
+      /* Snippets */
+      .main-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+      .snippet { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+      .snippet:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+      .snippet-head {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 16px;
-        min-height: 28px;
+        gap: 8px;
+        margin-bottom: 6px;
       }
-
-      .result-count {
-        font-size: 0.85rem;
-        color: #666;
-      }
-
-      #results {
-        /* HalSearch renders inside here */
-      }
-
-      /* ── Embed section ──────────────────────── */
-      .embed-snippet {
-        position: relative;
-        background: #1e1e2e;
-        color: #cdd6f4;
+      .snippet p { margin: 0 0 8px; font-size: 0.9rem; color: var(--muted); }
+      .snippet .check { margin-bottom: 8px; color: var(--text); }
+      .snippet .field { max-width: 220px; }
+      pre {
+        margin: 0;
+        padding: 12px;
+        background: var(--code-bg);
+        border: 1px solid var(--border);
         border-radius: 6px;
-        padding: 12px 14px;
-        font-family: monospace;
-        font-size: 0.78rem;
-        line-height: 1.5;
+        font: 0.82rem/1.5 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
         white-space: pre-wrap;
-        word-break: break-all;
-        overflow-x: auto;
+        overflow-wrap: anywhere;
+        word-break: break-word;
       }
-
-      .copy-btn {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        padding: 4px 10px;
-        background: #45475a;
-        color: #cdd6f4;
-        border: none;
-        border-radius: 4px;
-        font-size: 0.72rem;
-        cursor: pointer;
-      }
-
-      .copy-btn:hover { background: #585b70; }
-
-      .embed-preview {
-        margin-top: 12px;
-        border: 1px solid #d0d4da;
+      .note {
+        margin: 8px 0 0 !important;
+        padding: 8px 10px;
+        border: 1px solid var(--note-border);
         border-radius: 6px;
-        overflow: hidden;
+        background: var(--note-bg);
+        color: var(--text) !important;
       }
+      .note[hidden] { display: none; }
+      .links { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 8px; font-size: 0.9rem; }
 
-      .embed-preview iframe {
-        display: block;
-        width: 100%;
-        height: 500px;
-        border: none;
-      }
-
-      .embed-toggle {
-        width: 100%;
-        padding: 8px;
-        background: #f5f7fa;
-        border: 1px solid #d0d4da;
-        border-radius: 6px;
-        font-size: 0.82rem;
-        cursor: pointer;
-        color: #0052cc;
-        font-weight: 500;
-      }
-
-      .embed-toggle:hover { background: #e8ecf2; }
-
-      /* ── Responsive ─────────────────────────── */
-      @media (max-width: 720px) {
-        .layout { grid-template-columns: 1fr; }
-        .sidebar { border-right: none; border-bottom: 1px solid #e0e4ea; }
-      }
+      .page-footer { max-width: 1280px; margin: 0 auto; padding: 0 16px 32px; color: var(--muted); font-size: 0.9rem; }
     </style>
   </head>
   <body>
+    <a class="skip" href="#snippets">Skip to the snippets</a>
 
     <header class="site-header">
-      <h1>hal-search</h1>
-      <p>Browse articles from the HAL Open Archive API</p>
+      <div>
+        <h1>hal-search configurator</h1>
+        <p>
+          Choose what to list from the HAL open archive, check the preview, then copy the snippet for your
+          GitHub README or your website. <a href="https://github.com/JPugetGil/hal-search#readme">Documentation</a>
+        </p>
+      </div>
     </header>
 
     <div class="layout">
-
-      <!-- ── Sidebar ── -->
-      <aside class="sidebar">
-
-        <section>
-          <h2>Search</h2>
-          <label>
-            Query / Author UID
+      <form class="panel config" id="config" aria-label="Configuration" novalidate>
+        <fieldset>
+          <legend>What to list</legend>
+          <div class="field">
+            <label for="query-type">Search by</label>
+            <select id="query-type"></select>
+          </div>
+          <div class="field">
+            <label for="query-value" id="query-value-label">HAL author identifier (idHal)</label>
             <input
-              id="uid-input"
+              id="query-value"
               type="text"
-              placeholder="e.g. machine learning"
-              value="jpugetgil"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="1000"
+              aria-describedby="query-hint query-error"
             />
-          </label>
-          <button class="search-btn" id="search-btn">Search HAL</button>
-        </section>
-
-        <section>
-          <h2>Quick searches</h2>
-          <div class="chips">
-            <span class="chip" data-query="deep learning">deep learning</span>
-            <span class="chip" data-query="computer vision">computer vision</span>
-            <span class="chip" data-query="natural language processing">NLP</span>
-            <span class="chip" data-query="climate change">climate</span>
-            <span class="chip" data-query="quantum computing">quantum</span>
-            <span class="chip" data-query="bioinformatics">bioinformatics</span>
+            <p class="hint" id="query-hint"></p>
+            <p class="error" id="query-error"></p>
           </div>
-        </section>
+        </fieldset>
 
-        <section>
-          <h2>Detail level</h2>
-          <label>
-            Level
-            <select id="lvl-select">
-              <option value="0">0 — Minimal</option>
-              <option value="1" selected>1 — Basic</option>
-              <option value="2">2 — Detailed</option>
-              <option value="3">3 — Full</option>
+        <fieldset>
+          <legend>Filters</legend>
+          <fieldset>
+            <legend>Document types (none checked = all)</legend>
+            <div class="checks" id="doc-types"></div>
+          </fieldset>
+          <div class="row">
+            <div class="field">
+              <label for="year-from">From year</label>
+              <input id="year-from" type="number" inputmode="numeric" min="1900" max="2100" step="1" placeholder="2020" />
+            </div>
+            <div class="field">
+              <label for="year-to">To year</label>
+              <input id="year-to" type="number" inputmode="numeric" min="1900" max="2100" step="1" placeholder="2025" />
+            </div>
+          </div>
+          <label class="check"><input id="oa" type="checkbox" /> Open access only</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Display</legend>
+          <div class="field">
+            <label for="output">Output</label>
+            <select id="output">
+              <option value="html">HTML cards (interactive)</option>
+              <option value="svg">SVG image</option>
             </select>
-          </label>
-          <div class="level-desc" id="level-desc"></div>
+          </div>
+          <div class="field">
+            <label for="lvl">Detail level</label>
+            <select id="lvl" aria-describedby="lvl-hint">
+              <option value="0">0 – Citation only</option>
+              <option value="1">1 – Title, authors, venue (default)</option>
+              <option value="2">2 – + keywords, domains, open access</option>
+              <option value="3">3 – + abstract</option>
+            </select>
+            <p class="hint" id="lvl-hint"></p>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="rows">Publications per page</label>
+              <input id="rows" type="number" inputmode="numeric" min="1" max="50" step="1" placeholder="10" />
+            </div>
+            <div class="field">
+              <label for="max-authors">Authors before "et al."</label>
+              <input id="max-authors" type="number" inputmode="numeric" min="0" step="1" placeholder="10" aria-describedby="max-authors-hint" />
+            </div>
+          </div>
+          <p class="hint" id="max-authors-hint" style="margin: -6px 0 12px">0 shows every author. Default: 10.</p>
+          <div class="field">
+            <label for="sort">Sort</label>
+            <select id="sort">
+              <option value="date-desc">Newest first</option>
+              <option value="date-asc">Oldest first</option>
+              <option value="relevance">Relevance</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="group-by">Group by</label>
+            <select id="group-by">
+              <option value="none">No grouping</option>
+              <option value="year">Year</option>
+              <option value="docType">Document type</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="highlight">Authors to highlight</label>
+            <input id="highlight" type="text" autocomplete="off" spellcheck="false" aria-describedby="highlight-hint" />
+            <p class="hint" id="highlight-hint">Comma-separated full names or idHal values, shown in bold.</p>
+          </div>
+          <div class="field">
+            <label for="svg-title">Image title (SVG header)</label>
+            <input id="svg-title" type="text" maxlength="80" placeholder="Publications" />
+          </div>
+          <label class="check"><input id="credit" type="checkbox" checked /> Show the "hal-search" credit</label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Appearance</legend>
+          <div class="field">
+            <label for="theme">Theme</label>
+            <select id="theme" aria-describedby="theme-hint">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="auto">Auto (follows the visitor's system)</option>
+            </select>
+            <p class="hint" id="theme-hint"></p>
+          </div>
+          <fieldset>
+            <legend>Custom colors</legend>
+            <div class="color">
+              <input id="bg-on" type="checkbox" aria-label="Use a custom card background" />
+              <label for="bg">Card background</label>
+              <input id="bg" type="color" value="#ffffff" />
+            </div>
+            <div class="color">
+              <input id="text-on" type="checkbox" aria-label="Use a custom text color" />
+              <label for="text">Text</label>
+              <input id="text" type="color" value="#1a1a1a" />
+            </div>
+            <div class="color">
+              <input id="main-on" type="checkbox" aria-label="Use a custom accent color" />
+              <label for="main">Accent (links, buttons)</label>
+              <input id="main" type="color" value="#0052cc" />
+            </div>
+            <p class="hint">Picking a color turns its checkbox on. Uncheck it to go back to the theme color.</p>
+          </fieldset>
+        </fieldset>
+
+        <button class="button button--ghost" id="reset" type="button">Reset the form</button>
+      </form>
+
+      <div class="main-col">
+        <section class="panel" aria-labelledby="preview-title">
+          <h2 id="preview-title">Preview</h2>
+          <p class="status" id="status"></p>
+          <div class="preview" id="preview-box" data-theme="light">
+            <p class="preview-empty" id="preview-empty" hidden>Enter what to list to see a preview.</p>
+            <div id="preview"></div>
+          </div>
         </section>
 
-        <section>
-          <h2>Results per page</h2>
-          <label>
-            Rows
-            <input id="rows-input" type="number" value="5" min="1" max="50" />
-          </label>
+        <section class="panel" id="snippets" aria-labelledby="snippets-title" tabindex="-1">
+          <h2 id="snippets-title">Snippets</h2>
+
+          <div class="snippet">
+            <div class="snippet-head">
+              <h3 id="md-title">GitHub README (Markdown)</h3>
+              <button class="button" type="button" data-copy="md" aria-describedby="md-title">Copy</button>
+            </div>
+            <p>An SVG image from the public image service, wrapped in a link to HAL (links inside images are not clickable on GitHub).</p>
+            <label class="check"><input id="md-dark" type="checkbox" /> Follow the GitHub light/dark theme (uses <code>&lt;picture&gt;</code>)</label>
+            <pre id="md"></pre>
+            <p class="note" id="md-note" hidden></p>
+          </div>
+
+          <div class="snippet">
+            <div class="snippet-head">
+              <h3 id="svg-title-h">Image URL (SVG)</h3>
+              <button class="button" type="button" data-copy="svg-url" aria-describedby="svg-title-h">Copy</button>
+            </div>
+            <p>For any page that accepts an image address. Images are cached for one hour.</p>
+            <pre id="svg-url"></pre>
+            <div class="links"><a id="svg-open" href="#" target="_blank" rel="noopener noreferrer">Open the image <span class="visually-hidden">(opens in a new tab)</span></a></div>
+          </div>
+
+          <div class="snippet">
+            <div class="snippet-head">
+              <h3 id="wc-title">Website: web component</h3>
+              <button class="button" type="button" data-copy="wc" aria-describedby="wc-title">Copy</button>
+            </div>
+            <p>Interactive cards for WordPress, Hugo, Drupal or plain HTML. Load the script once per page.</p>
+            <pre id="wc"></pre>
+          </div>
+
+          <div class="snippet">
+            <div class="snippet-head">
+              <h3 id="iframe-title">Website: iframe</h3>
+              <button class="button" type="button" data-copy="iframe" aria-describedby="iframe-title">Copy</button>
+            </div>
+            <p>When you can't add a script. An iframe doesn't resize itself: adjust the height.</p>
+            <div class="field">
+              <label for="iframe-height">Frame height (px)</label>
+              <input id="iframe-height" type="number" inputmode="numeric" min="200" max="5000" step="50" value="800" />
+            </div>
+            <pre id="iframe"></pre>
+            <p class="note" id="iframe-note" hidden></p>
+          </div>
+
+          <div class="snippet">
+            <div class="snippet-head">
+              <h3 id="js-title">JavaScript (npm)</h3>
+              <button class="button" type="button" data-copy="js" aria-describedby="js-title">Copy</button>
+            </div>
+            <p>After <code>npm install hal-search</code>, with a <code>&lt;div id="publications"&gt;</code> in your page.</p>
+            <pre id="js"></pre>
+          </div>
+
+          <div class="snippet">
+            <div class="snippet-head">
+              <h3 id="share-title">Link to this configuration</h3>
+              <button class="button" type="button" data-copy="share" aria-describedby="share-title">Copy</button>
+            </div>
+            <pre id="share"></pre>
+          </div>
         </section>
-
-        <section>
-          <h2>Colors</h2>
-          <div class="color-row">
-            <label>Background</label>
-            <input type="color" id="color-bg" value="#ffffff" />
-            <span class="color-hex" id="color-bg-hex">#ffffff</span>
-          </div>
-          <div class="color-row">
-            <label>Text</label>
-            <input type="color" id="color-text" value="#1a1a1a" />
-            <span class="color-hex" id="color-text-hex">#1a1a1a</span>
-          </div>
-          <div class="color-row">
-            <label>Main (accent)</label>
-            <input type="color" id="color-main" value="#0052cc" />
-            <span class="color-hex" id="color-main-hex">#0052cc</span>
-          </div>
-        </section>
-
-        <section>
-          <h2>Embed</h2>
-          <button class="embed-toggle" id="embed-toggle">Show embed code</button>
-        </section>
-
-      </aside>
-
-      <!-- ── Main ── -->
-      <main class="main">
-        <div class="main-header">
-          <span class="result-count" id="result-count"></span>
-        </div>
-        <div id="results"></div>
-
-        <!-- Embed panel (hidden by default) -->
-        <div id="embed-panel" style="display:none; margin-top: 24px;">
-          <h3 style="font-size:0.9rem; margin-bottom:10px; color:#444;">Embed this search</h3>
-          <div class="embed-snippet" id="embed-snippet">
-            <button class="copy-btn" id="copy-btn">Copy</button>
-            <code id="embed-code"></code>
-          </div>
-        </div>
-      </main>
-
+      </div>
     </div>
 
-    <script type="module">
-      import { HalSearch } from './hal-search.es.js';
+    <footer class="page-footer">
+      <p>
+        Data from <a href="https://hal.science/">HAL</a>, queried directly from your browser. Guides:
+        <a href="https://github.com/JPugetGil/hal-search/blob/main/docs/github-readme.md">GitHub README</a>,
+        <a href="https://github.com/JPugetGil/hal-search/blob/main/docs/lab-website.md">lab website</a>.
+      </p>
+    </footer>
 
-      // ── Level descriptions ─────────────────────
-      const LEVEL_DESCRIPTIONS = {
-        0: { label: 'Minimal', fields: 'Citation label + link to HAL' },
-        1: { label: 'Basic',   fields: 'Title, authors, date, document type' },
-        2: { label: 'Detailed',fields: 'All basic fields + keywords, domains, open access badge, conference' },
-        3: { label: 'Full',    fields: 'All available HAL fields (fl=*)' },
+    <div class="visually-hidden" id="copy-status" role="status" aria-live="polite"></div>
+
+    <script type="module">
+      import {
+        HalSearch,
+        DOC_TYPE_LABELS,
+        parseUrlParams,
+        toUrlParams,
+        buildMarkdownSnippet,
+        buildSvgUrl,
+        buildWebComponentSnippet,
+        buildEmbedSnippet,
+        hasQueryCriterion,
+      } from './hal-search.es.js';
+
+      // ── Constants ─────────────────────────────────────────────
+      const SVG_BASE = 'https://hal-search.vercel.app';
+      const SVG_MAX_ROWS = 20;
+      const CDN_URL = 'https://cdn.jsdelivr.net/npm/hal-search@0.5/dist/hal-search.min.js';
+      const HOSTED_CONFIGURATOR = 'https://jpugetgil.github.io/hal-search/';
+      /** Directory of this page: embed.html is published next to it. */
+      const EMBED_BASE = new URL('./', location.href).href.replace(/\/+$/, '');
+      const DEFAULT_PARAMS = 'idHal=jpugetgil&rows=5';
+      const TEXT_DEBOUNCE_MS = 450;
+
+      /** Query types, keyed by their public URL parameter. */
+      const QUERY_TYPES = {
+        idHal: {
+          name: 'HAL author identifier (idHal)',
+          placeholder: 'jdupont',
+          hint: 'The end of your HAL CV address: https://cv.hal.science/jdupont',
+        },
+        orcid: {
+          name: 'ORCID iD',
+          placeholder: '0000-0002-1825-0097',
+          hint: '16 digits with dashes. Only HAL deposits linked to this ORCID iD are listed.',
+        },
+        collection: {
+          name: 'HAL collection code',
+          placeholder: 'LIRIS',
+          hint: 'The end of the collection page address: https://hal.science/LIRIS',
+        },
+        structId: {
+          name: 'HAL structure id (lab or team)',
+          placeholder: '1234',
+          hint: 'Numeric identifier of the lab or team in AuréHAL, the HAL structure reference.',
+        },
+        search: {
+          name: 'Free text',
+          placeholder: 'graph "deep learning"',
+          hint: 'Words to search for. Use double quotes for an exact phrase.',
+        },
+        q: {
+          name: 'Raw Solr query (advanced)',
+          placeholder: 'authFullName_s:"Jane Doe"',
+          hint: 'Sent to the HAL API as is (see the HAL API documentation).',
+        },
       };
 
-      function updateLevelDesc(lvl) {
-        const d = LEVEL_DESCRIPTIONS[lvl];
-        const el = document.getElementById('level-desc');
-        el.innerHTML = `<strong>${d.label}</strong>${d.fields}`;
+      /** UrlState.query field of each query type. */
+      const QUERY_FIELDS = { idHal: 'idHal', orcid: 'orcid', collection: 'collection', structId: 'structId', search: 'text', q: 'solr' };
+
+      const DOC_TYPES = ['ART', 'COMM', 'COUV', 'OUV', 'THESE', 'HDR', 'POSTER', 'REPORT', 'PROCEEDINGS', 'SOFTWARE', 'OTHER', 'UNDEFINED'];
+      const DOC_TYPE_NAMES = { ...DOC_TYPE_LABELS, UNDEFINED: 'Preprint, working paper' };
+
+      const LEVEL_HINTS = {
+        0: 'One citation line per publication, linking to HAL.',
+        1: 'Title, authors, year, venue, document type, PDF and DOI links.',
+        2: 'Level 1 + Open Access badge, keywords, domains, BibTeX and "Copy citation".',
+        3: 'Level 2 + the abstract ("Show more" in HTML, 3 lines in SVG).',
+      };
+
+      const THEME_HINTS = {
+        light: '',
+        dark: 'Tuned for GitHub’s dark background.',
+        auto: 'In a GitHub README this follows the reader’s operating system, not their GitHub theme: prefer the light/dark option of the Markdown snippet.',
+      };
+
+      // ── Elements ──────────────────────────────────────────────
+      const $ = (id) => document.getElementById(id);
+      const form = $('config');
+      const queryType = $('query-type');
+      const queryValue = $('query-value');
+      const queryLabel = $('query-value-label');
+      const queryHint = $('query-hint');
+      const queryError = $('query-error');
+      const docTypesBox = $('doc-types');
+      const previewBox = $('preview-box');
+      const previewEl = $('preview');
+      const previewEmpty = $('preview-empty');
+      const statusEl = $('status');
+      const copyStatus = $('copy-status');
+      const colorKeys = [
+        { param: 'bg', input: $('bg'), toggle: $('bg-on') },
+        { param: 'text', input: $('text'), toggle: $('text-on') },
+        { param: 'main', input: $('main'), toggle: $('main-on') },
+      ];
+
+      // Static options built with DOM APIs (no innerHTML anywhere on this page).
+      for (const [value, type] of Object.entries(QUERY_TYPES)) queryType.add(new Option(type.name, value));
+      for (const code of DOC_TYPES) {
+        const label = document.createElement('label');
+        label.className = 'check';
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.name = 'docType';
+        box.value = code;
+        label.append(box, ` ${DOC_TYPE_NAMES[code] ?? code}`);
+        docTypesBox.appendChild(label);
       }
 
-      // ── Embed panel ────────────────────────────
-      const embedPanel  = document.getElementById('embed-panel');
-      const embedToggle = document.getElementById('embed-toggle');
-      const embedCode   = document.getElementById('embed-code');
-      const copyBtn     = document.getElementById('copy-btn');
-      let embedVisible  = false;
-
-      function updateEmbed() {
-        const uid  = document.getElementById('uid-input').value.trim();
-        const lvl  = document.getElementById('lvl-select').value;
-        const rows = document.getElementById('rows-input').value;
-        const bg   = colorBg.value;
-        const text = colorText.value;
-        const main = colorMain.value;
-        const base = window.location.href.replace(/\/[^/]*$/, '');
-        let embedUrl = `${base}/embed.html?uid=${encodeURIComponent(uid)}&lvl=${lvl}&rows=${rows}`;
-        if (bg !== '#ffffff')   embedUrl += `&bg=${encodeURIComponent(bg)}`;
-        if (text !== '#1a1a1a') embedUrl += `&text=${encodeURIComponent(text)}`;
-        if (main !== '#0052cc') embedUrl += `&main=${encodeURIComponent(main)}`;
-        const snippet = `<iframe src="${embedUrl}" width="100%" height="600" frameborder="0" style="border:none;"></iframe>`;
-        embedCode.textContent = snippet;
-        embedIframe.src = embedUrl;
+      // ── Form ⇄ public URL scheme ─────────────────────────────
+      function setIfFilled(params, name, value) {
+        const v = String(value ?? '').trim();
+        if (v) params.set(name, v);
       }
 
-      embedToggle.addEventListener('click', () => {
-        embedVisible = !embedVisible;
-        embedPanel.style.display = embedVisible ? 'block' : 'none';
-        embedToggle.textContent = embedVisible ? 'Hide embed code' : 'Show embed code';
-        if (embedVisible) updateEmbed();
+      /** Reads the form as public URL parameters (validated afterwards by parseUrlParams). */
+      function formToParams() {
+        const params = new URLSearchParams();
+        let value = queryValue.value.trim();
+        if (queryType.value === 'orcid') value = value.replace(/^https?:\/\/(www\.)?orcid\.org\//i, '');
+        setIfFilled(params, queryType.value, value);
+
+        const docTypes = [...docTypesBox.querySelectorAll('input:checked')].map((box) => box.value);
+        if (docTypes.length) params.set('docTypes', docTypes.join(','));
+        setIfFilled(params, 'yearFrom', $('year-from').value);
+        setIfFilled(params, 'yearTo', $('year-to').value);
+        if ($('oa').checked) params.set('oa', '1');
+
+        params.set('output', $('output').value);
+        params.set('lvl', $('lvl').value);
+        setIfFilled(params, 'rows', $('rows').value);
+        setIfFilled(params, 'maxAuthors', $('max-authors').value);
+        params.set('sort', $('sort').value);
+        params.set('groupBy', $('group-by').value);
+        setIfFilled(params, 'highlight', $('highlight').value);
+        setIfFilled(params, 'title', $('svg-title').value);
+        if (!$('credit').checked) params.set('credit', '0');
+
+        params.set('theme', $('theme').value);
+        for (const { param, input, toggle } of colorKeys) if (toggle.checked) params.set(param, input.value);
+        return params;
+      }
+
+      /** Fills the form from a parsed state (only one query criterion is editable here). */
+      function stateToForm(state) {
+        const type = Object.keys(QUERY_FIELDS).find((t) => state.query[QUERY_FIELDS[t]] !== undefined) ?? 'idHal';
+        queryType.value = type;
+        queryValue.value = state.query[QUERY_FIELDS[type]] ?? '';
+        updateQueryLabels();
+
+        const docTypes = new Set(state.filters.docTypes ?? []);
+        for (const box of docTypesBox.querySelectorAll('input')) box.checked = docTypes.has(box.value);
+        $('year-from').value = state.filters.yearFrom ?? '';
+        $('year-to').value = state.filters.yearTo ?? '';
+        $('oa').checked = state.filters.openAccess === true;
+
+        $('output').value = state.output ?? 'html';
+        $('lvl').value = String(state.lvl ?? 1);
+        $('rows').value = state.rows ?? '';
+        $('max-authors').value = state.maxAuthors ?? '';
+        $('sort').value = state.sort ?? 'date-desc';
+        $('group-by').value = state.groupBy ?? 'none';
+        $('highlight').value = (state.highlightAuthors ?? []).join(', ');
+        $('svg-title').value = state.title ?? '';
+        $('credit').checked = state.showCredit !== false;
+
+        $('theme').value = state.theme ?? 'light';
+        const colors = { bg: state.backgroundColor, text: state.textColor, main: state.mainColor };
+        for (const { param, input, toggle } of colorKeys) {
+          const color = colors[param];
+          toggle.checked = color !== undefined;
+          // <input type="color"> only takes #rrggbb.
+          if (color && /^#[0-9a-f]{6}$/i.test(color)) input.value = color;
+        }
+      }
+
+      function updateQueryLabels() {
+        const type = QUERY_TYPES[queryType.value];
+        queryLabel.textContent = type.name;
+        queryValue.placeholder = type.placeholder;
+        queryHint.textContent = type.hint;
+        queryValue.inputMode = queryType.value === 'structId' ? 'numeric' : 'text';
+      }
+
+      // ── Preview (HalSearch) ──────────────────────────────────
+      let hs = null;
+      let configKey = '';
+      let appearance = null;
+      let searchKey = '';
+
+      function onResults(response) {
+        const n = response.response?.numFound ?? 0;
+        statusEl.textContent = n === 1 ? '1 publication found.' : `${n.toLocaleString('en')} publications found.`;
+      }
+
+      function onError() {
+        statusEl.textContent = 'HAL returned an error: see the message in the preview.';
+      }
+
+      function resetPreview() {
+        hs?.destroy();
+        hs = null;
+        configKey = '';
+        appearance = null;
+        searchKey = '';
+      }
+
+      function updatePreview(state) {
+        const theme = state.theme ?? 'light';
+        previewBox.dataset.theme = theme;
+        const has = hasQueryCriterion(state.query);
+        previewEmpty.hidden = has;
+        if (!has) {
+          resetPreview();
+          statusEl.textContent = '';
+          return;
+        }
+
+        // Options fixed at construction: a change needs a new instance.
+        const config = {
+          output: state.output ?? 'html',
+          groupBy: state.groupBy,
+          highlightAuthors: state.highlightAuthors,
+          maxAuthors: state.maxAuthors,
+          showCredit: state.showCredit,
+          title: state.title,
+        };
+        const next = {
+          theme,
+          backgroundColor: state.backgroundColor,
+          textColor: state.textColor,
+          mainColor: state.mainColor,
+        };
+        const key = JSON.stringify(config);
+        if (!hs || key !== configKey) {
+          resetPreview();
+          // headingLevel 4: titles sit under the "Preview" <h2>, group headings become <h3>.
+          hs = new HalSearch({ container: previewEl, headingLevel: 4, ...config, ...next, onResults, onError });
+          configKey = key;
+        } else if (JSON.stringify(next) !== JSON.stringify(appearance)) {
+          // Applied in place, without a new request.
+          if (next.theme !== appearance.theme) hs.setTheme(next.theme);
+          hs.setColors({ backgroundColor: next.backgroundColor, textColor: next.textColor, mainColor: next.mainColor });
+        }
+        appearance = next;
+
+        const search = {
+          query: state.query,
+          filters: state.filters,
+          sort: state.sort ?? 'date-desc',
+          lvl: state.lvl ?? 1,
+          rows: state.rows ?? 10,
+        };
+        const sKey = JSON.stringify(search);
+        if (sKey !== searchKey) {
+          searchKey = sKey;
+          statusEl.textContent = 'Loading…';
+          void hs.search(search);
+        }
+      }
+
+      // ── Snippets ──────────────────────────────────────────────
+      /** Small JS literal printer for the npm snippet (unquoted keys, single-quoted strings). */
+      function toJs(value, indent = '') {
+        if (Array.isArray(value)) return `[${value.map((v) => toJs(v, indent)).join(', ')}]`;
+        if (value && typeof value === 'object') {
+          const inner = `${indent}  `;
+          const entries = Object.entries(value)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => `${inner}${/^[A-Za-z_$][\w$]*$/.test(k) ? k : JSON.stringify(k)}: ${toJs(v, inner)}`);
+          return entries.length ? `{\n${entries.join(',\n')},\n${indent}}` : '{}';
+        }
+        if (typeof value === 'string') {
+          return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n')}'`;
+        }
+        return String(value);
+      }
+
+      function buildJsSnippet(state) {
+        const options = { container: '#publications' };
+        if (state.output === 'svg') options.output = 'svg';
+        if (state.lvl !== undefined && state.lvl !== 1) options.lvl = state.lvl;
+        if (state.rows !== undefined && state.rows !== 10) options.rows = state.rows;
+        if (state.groupBy && state.groupBy !== 'none') options.groupBy = state.groupBy;
+        if (state.highlightAuthors?.length) options.highlightAuthors = state.highlightAuthors;
+        if (state.maxAuthors !== undefined && state.maxAuthors !== 10) options.maxAuthors = state.maxAuthors;
+        if (state.showCredit === false) options.showCredit = false;
+        if (state.title) options.title = state.title;
+        if (state.theme && state.theme !== 'light') options.theme = state.theme;
+        if (state.backgroundColor) options.backgroundColor = state.backgroundColor;
+        if (state.textColor) options.textColor = state.textColor;
+        if (state.mainColor) options.mainColor = state.mainColor;
+
+        const search = { query: state.query };
+        if (Object.keys(state.filters).length) search.filters = state.filters;
+        if (state.sort && state.sort !== 'date-desc') search.sort = state.sort;
+
+        return [
+          "import { HalSearch } from 'hal-search';",
+          '',
+          `const hs = new HalSearch(${toJs(options)});`,
+          '',
+          `hs.search(${toJs(search)});`,
+        ].join('\n');
+      }
+
+      function showNote(el, text) {
+        el.textContent = text;
+        el.hidden = !text;
+      }
+
+      function isPublicBase(url) {
+        try {
+          const { protocol, hostname } = new URL(url);
+          return protocol === 'https:' && !/^(localhost|127\.|\[::1\]|0\.0\.0\.0)/.test(hostname);
+        } catch {
+          return false;
+        }
+      }
+
+      function updateSnippets(state) {
+        const has = hasQueryCriterion(state.query);
+        const snippets = {};
+        if (has) {
+          snippets.md = buildMarkdownSnippet({ svgBase: SVG_BASE, ...state, darkMode: $('md-dark').checked });
+          snippets['svg-url'] = buildSvgUrl(SVG_BASE, state);
+          // '<' + '/script>' so that this inline module is not closed early.
+          snippets.wc = `<script src="${CDN_URL}" defer><` + `/script>\n${buildWebComponentSnippet(state)}`;
+          const height = Math.min(5000, Math.max(200, parseInt($('iframe-height').value, 10) || 800));
+          snippets.iframe = buildEmbedSnippet({ embedBase: EMBED_BASE, ...state, height: String(height) });
+          snippets.js = buildJsSnippet(state);
+        }
+        snippets.share = location.href;
+
+        for (const id of ['md', 'svg-url', 'wc', 'iframe', 'js', 'share']) {
+          const text = snippets[id];
+          $(id).textContent = text ?? 'Enter what to list first.';
+          const button = document.querySelector(`[data-copy="${id}"]`);
+          button.disabled = text === undefined;
+        }
+
+        const svgOpen = $('svg-open');
+        svgOpen.hidden = !has;
+        if (has) svgOpen.href = snippets['svg-url'];
+
+        const mdNotes = [];
+        if (has && (state.rows ?? 10) > SVG_MAX_ROWS) {
+          mdNotes.push(`The image service shows at most ${SVG_MAX_ROWS} publications per image: rows is capped at ${SVG_MAX_ROWS}.`);
+        }
+        if (has && state.theme === 'auto' && !$('md-dark').checked) {
+          mdNotes.push('theme=auto follows the reader’s operating system on GitHub. Tick the light/dark option to follow their GitHub theme instead.');
+        }
+        showNote($('md-note'), mdNotes.join(' '));
+        showNote(
+          $('iframe-note'),
+          has && !isPublicBase(EMBED_BASE)
+            ? `This snippet points to the page you are viewing (${EMBED_BASE}). Use the hosted configurator (${HOSTED_CONFIGURATOR}) or your own server for a public address.`
+            : '',
+        );
+      }
+
+      // ── Update loop ───────────────────────────────────────────
+      function syncLocation(state) {
+        const search = toUrlParams(state).toString();
+        try {
+          history.replaceState(null, '', search ? `?${search}` : location.pathname);
+        } catch {
+          // Some browsers refuse replaceState on file:// pages: the share link then stays as is.
+        }
+      }
+
+      function validate(params, state) {
+        const raw = params.get(queryType.value);
+        const invalid = raw !== null && !hasQueryCriterion(state.query);
+        queryValue.setAttribute('aria-invalid', String(invalid));
+        queryError.textContent = invalid ? `This is not a valid value for “${QUERY_TYPES[queryType.value].name}”.` : '';
+      }
+
+      function update() {
+        const params = formToParams();
+        const state = parseUrlParams(params);
+        validate(params, state);
+        $('lvl-hint').textContent = LEVEL_HINTS[state.lvl ?? 1];
+        $('theme-hint').textContent = THEME_HINTS[state.theme ?? 'light'];
+        syncLocation(state);
+        updatePreview(state);
+        updateSnippets(state);
+      }
+
+      let timer;
+      function schedule(delay) {
+        clearTimeout(timer);
+        timer = setTimeout(update, delay);
+      }
+
+      const isTyping = (el) => el instanceof HTMLInputElement && (el.type === 'text' || el.type === 'number');
+
+      form.addEventListener('input', (event) => {
+        const target = event.target;
+        const color = colorKeys.find((c) => c.input === target);
+        if (color) color.toggle.checked = true;
+        schedule(isTyping(target) ? TEXT_DEBOUNCE_MS : 0);
+      });
+      form.addEventListener('change', (event) => {
+        if (event.target === queryType) {
+          updateQueryLabels();
+          queryValue.value = '';
+        }
+        schedule(0);
+      });
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        schedule(0);
+      });
+      $('md-dark').addEventListener('change', () => schedule(0));
+      $('iframe-height').addEventListener('input', () => schedule(TEXT_DEBOUNCE_MS));
+      $('reset').addEventListener('click', () => {
+        stateToForm(parseUrlParams(new URLSearchParams(DEFAULT_PARAMS)));
+        $('md-dark').checked = false;
+        schedule(0);
       });
 
-      copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(embedCode.textContent).then(() => {
-          copyBtn.textContent = 'Copied!';
-          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+      // ── Copy buttons ──────────────────────────────────────────
+      async function copyText(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          // Insecure context or permission denied: legacy fallback.
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+          document.body.appendChild(area);
+          area.select();
+          let ok = false;
+          try {
+            ok = document.execCommand('copy');
+          } catch {
+            ok = false;
+          }
+          area.remove();
+          return ok;
+        }
+      }
+
+      for (const button of document.querySelectorAll('[data-copy]')) {
+        let reset;
+        button.addEventListener('click', async () => {
+          const target = $(button.dataset.copy);
+          const ok = await copyText(target.textContent);
+          const name = $(button.getAttribute('aria-describedby')).textContent;
+          if (ok) {
+            button.textContent = 'Copied!';
+            copyStatus.textContent = `${name}: copied to the clipboard.`;
+          } else {
+            // Select the text so that the user can copy it by hand.
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            const selection = getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            copyStatus.textContent = `${name}: copying failed. The text is selected, press Ctrl+C or Cmd+C.`;
+          }
+          clearTimeout(reset);
+          reset = setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 2000);
         });
-      });
-
-      // ── Color pickers ──────────────────────────
-      const colorBg   = document.getElementById('color-bg');
-      const colorText = document.getElementById('color-text');
-      const colorMain = document.getElementById('color-main');
-
-      function onColorChange() {
-        document.getElementById('color-bg-hex').textContent = colorBg.value;
-        document.getElementById('color-text-hex').textContent = colorText.value;
-        document.getElementById('color-main-hex').textContent = colorMain.value;
-        hs.setColors({
-          backgroundColor: colorBg.value,
-          textColor: colorText.value,
-          mainColor: colorMain.value,
-        });
       }
 
-      colorBg.addEventListener('input', onColorChange);
-      colorText.addEventListener('input', onColorChange);
-      colorMain.addEventListener('input', onColorChange);
-
-      // ── Init HalSearch ─────────────────────────
-      const hs = new HalSearch({
-        container: '#results',
-        lvl: 1,
-        rows: 5,
-        onResults: (r) => {
-          const count = r.response.numFound.toLocaleString();
-          document.getElementById('result-count').textContent =
-            `${count} article${r.response.numFound !== 1 ? 's' : ''} found`;
-          if (embedVisible) updateEmbed();
-        },
-        onError: (err) => {
-          document.getElementById('result-count').textContent = '';
-          console.error('[hal-search]', err.message);
-        },
-      });
-
-      // ── Run search ─────────────────────────────
-      function runSearch() {
-        const uid  = document.getElementById('uid-input').value.trim();
-        const lvl  = parseInt(document.getElementById('lvl-select').value, 10);
-        const rows = parseInt(document.getElementById('rows-input').value, 10) || 5;
-        if (!uid) return;
-        document.getElementById('result-count').textContent = '';
-        hs.setLevel(lvl);
-        hs.search({ uid, rows });
-      }
-
-      // ── Events ────────────────────────────────
-      document.getElementById('search-btn').addEventListener('click', runSearch);
-
-      document.getElementById('uid-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') runSearch();
-      });
-
-      document.getElementById('lvl-select').addEventListener('change', (e) => {
-        updateLevelDesc(parseInt(e.target.value, 10));
-        runSearch();
-      });
-
-      document.querySelectorAll('.chip').forEach((chip) => {
-        chip.addEventListener('click', () => {
-          document.getElementById('uid-input').value = chip.dataset.query;
-          runSearch();
-        });
-      });
-
-      // ── Initial state ─────────────────────────
-      updateLevelDesc(1);
-      runSearch();
+      // ── Start ─────────────────────────────────────────────────
+      const fromUrl = parseUrlParams(new URLSearchParams(location.search));
+      stateToForm(hasQueryCriterion(fromUrl.query) ? fromUrl : parseUrlParams(new URLSearchParams(DEFAULT_PARAMS)));
+      update();
     </script>
-
   </body>
 </html>

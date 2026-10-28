@@ -3,154 +3,160 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>hal-search — dev sandbox</title>
+    <title>hal-search dev sandbox</title>
     <style>
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        padding: 2rem;
-        font-family: system-ui, sans-serif;
+        padding: 16px;
+        font: 15px/1.5 system-ui, sans-serif;
         background: #f5f7fa;
+        color: #1a1a1a;
       }
-      h1 { margin: 0 0 1.5rem; font-size: 1.4rem; color: #1a1a1a; }
-      .controls {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 1rem;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-      .controls input[type="text"] {
-        flex: 1;
-        min-width: 220px;
-        padding: 8px 12px;
-        border: 1px solid #d0d0d0;
-        border-radius: 6px;
-        font-size: 0.9rem;
-      }
-      .controls select,
-      .controls input[type="number"] {
-        padding: 8px 10px;
-        border: 1px solid #d0d0d0;
-        border-radius: 6px;
-        font-size: 0.9rem;
-      }
-      .controls button {
-        padding: 8px 20px;
-        background: #0052cc;
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        cursor: pointer;
-      }
-      .controls button:hover { background: #003d99; }
-      label { font-size: 0.85rem; color: #555; }
-      .color-controls {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      .color-controls label {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-      }
-      .color-controls input[type="color"] {
-        width: 32px;
-        height: 32px;
-        padding: 2px;
-        border: 1px solid #d0d0d0;
-        border-radius: 6px;
-        cursor: pointer;
-      }
-      #results { margin-top: 1rem; }
+      body.dark { background: #0d1117; color: #e6edf3; }
+      h1 { margin: 0 0 16px; font-size: 1.4rem; }
+      h2 { margin: 32px 0 8px; font-size: 1.1rem; }
+      .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 16px; }
+      .controls label { display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem; }
+      .controls input[type="text"] { min-width: 200px; }
+      .controls input, .controls select, .controls button { padding: 6px 8px; font: inherit; }
+      .controls button { background: #0052cc; color: #fff; border: 0; border-radius: 6px; padding: 7px 16px; cursor: pointer; }
+      .controls .inline { flex-direction: row; align-items: center; gap: 6px; }
+      #log { font: 0.8rem/1.4 ui-monospace, Consolas, monospace; white-space: pre-wrap; margin: 8px 0 0; }
     </style>
   </head>
   <body>
     <h1>hal-search dev sandbox</h1>
 
-    <div class="controls">
-      <input
-        id="uid-input"
-        type="text"
-        placeholder="Author UID or search query (e.g. authIdHal_s:jdupont)"
-        value="jpugetgil"
-      />
-
+    <form class="controls" id="controls">
       <label>
-        Level
-        <select id="lvl-select">
-          <option value="0">0 — minimal</option>
-          <option value="1" selected>1 — basic</option>
-          <option value="2">2 — detailed</option>
-          <option value="3">3 — full</option>
+        Search by
+        <select id="query-type">
+          <option value="idHal">idHal</option>
+          <option value="orcid">ORCID</option>
+          <option value="collection">Collection</option>
+          <option value="structId">structId</option>
+          <option value="text">Free text</option>
+          <option value="solr">Raw Solr</option>
         </select>
       </label>
-
+      <label>
+        Value
+        <input id="query-value" type="text" value="jpugetgil" />
+      </label>
+      <label>
+        Level
+        <select id="lvl">
+          <option value="0">0 – minimal</option>
+          <option value="1" selected>1 – basic</option>
+          <option value="2">2 – detailed</option>
+          <option value="3">3 – full</option>
+        </select>
+      </label>
       <label>
         Rows
-        <input id="rows-input" type="number" value="5" min="1" max="100" style="width:70px" />
-      </label>
-
-      <button id="search-btn">Search</button>
-    </div>
-
-    <div class="color-controls" style="margin-bottom: 1rem;">
-      <label>
-        Background
-        <input type="color" id="color-bg" value="#ffffff" />
+        <input id="rows" type="number" value="5" min="1" max="100" style="width: 5em" />
       </label>
       <label>
-        Text
-        <input type="color" id="color-text" value="#1a1a1a" />
+        Output
+        <select id="output">
+          <option value="html">html</option>
+          <option value="svg">svg</option>
+        </select>
       </label>
       <label>
-        Main color
-        <input type="color" id="color-main" value="#0052cc" />
+        Group by
+        <select id="group-by">
+          <option value="none">none</option>
+          <option value="year">year</option>
+          <option value="docType">docType</option>
+        </select>
       </label>
-    </div>
+      <label>
+        Theme
+        <select id="theme">
+          <option value="light">light</option>
+          <option value="dark">dark</option>
+          <option value="auto">auto</option>
+        </select>
+      </label>
+      <label class="inline"><input id="main-on" type="checkbox" /> Accent</label>
+      <label>
+        Accent color
+        <input id="main" type="color" value="#c8102e" />
+      </label>
+      <button type="submit">Search</button>
+    </form>
 
     <div id="results"></div>
 
+    <h2>&lt;hal-search&gt; web component</h2>
+    <hal-search id-hal="jpugetgil" rows="3" lvl="2" group-by="year"></hal-search>
+    <pre id="log"></pre>
+
     <script type="module">
-      import { HalSearch } from '/src/index.ts';
+      import { HalSearch, defineHalSearchElement } from '/src/index.ts';
 
-      const hs = new HalSearch({
-        container: '#results',
-        lvl: 1,
-        rows: 5,
-        onResults: (r) => {
-          console.log(`[hal-search] ${r.response.numFound} results found`);
-        },
-        onError: (err) => {
-          console.error('[hal-search] error:', err.message);
-        },
+      const $ = (id) => document.getElementById(id);
+      let hs;
+      let output;
+
+      function query() {
+        const type = $('query-type').value;
+        const value = $('query-value').value.trim();
+        return value ? { [type]: value } : {};
+      }
+
+      function applyTheme(theme) {
+        document.body.classList.toggle('dark', theme === 'dark');
+      }
+
+      function search() {
+        // groupBy and output are constructor options: rebuild the instance when they change.
+        const groupBy = $('group-by').value;
+        const nextOutput = `${$('output').value}/${groupBy}`;
+        if (!hs || nextOutput !== output) {
+          hs?.destroy();
+          hs = new HalSearch({
+            container: '#results',
+            output: $('output').value,
+            groupBy,
+            theme: $('theme').value,
+            mainColor: $('main-on').checked ? $('main').value : undefined,
+            onResults: (r) => console.log(`[hal-search] ${r.response.numFound} results`, hs.state),
+            onError: (err) => console.error('[hal-search] error:', err.message),
+          });
+          output = nextOutput;
+        }
+        const q = query();
+        if (Object.keys(q).length === 0) return;
+        hs.search({ query: q, lvl: Number($('lvl').value), rows: Number($('rows').value) || 10 });
+      }
+
+      $('controls').addEventListener('submit', (event) => {
+        event.preventDefault();
+        search();
+      });
+      $('lvl').addEventListener('change', () => hs?.setLevel(Number($('lvl').value)));
+      $('theme').addEventListener('change', () => {
+        applyTheme($('theme').value);
+        hs?.setTheme($('theme').value);
+      });
+      $('main').addEventListener('input', () => {
+        $('main-on').checked = true;
+        hs?.setColors({ mainColor: $('main').value });
+      });
+      $('main-on').addEventListener('change', () => {
+        hs?.setColors({ mainColor: $('main-on').checked ? $('main').value : undefined });
       });
 
-      // ── Color pickers ──
-      document.getElementById('color-bg').addEventListener('input', (e) => {
-        hs.setColors({ backgroundColor: e.target.value });
-      });
-      document.getElementById('color-text').addEventListener('input', (e) => {
-        hs.setColors({ textColor: e.target.value });
-      });
-      document.getElementById('color-main').addEventListener('input', (e) => {
-        hs.setColors({ mainColor: e.target.value });
-      });
+      // Web component: events bubble out of the Shadow DOM.
+      defineHalSearchElement();
+      const log = (line) => ($('log').textContent += `${line}\n`);
+      document.addEventListener('hal-results', (e) => log(`hal-results: ${e.detail.response.response.numFound} results`));
+      document.addEventListener('hal-error', (e) => log(`hal-error: ${e.detail.error.message}`));
 
-      document.getElementById('search-btn').addEventListener('click', () => {
-        const uid = document.getElementById('uid-input').value.trim();
-        const lvl = parseInt(document.getElementById('lvl-select').value, 10);
-        const rows = parseInt(document.getElementById('rows-input').value, 10);
-        if (!uid) return;
-        hs.setLevel(lvl);
-        hs.search({ uid, rows });
-      });
-
-      // Run initial search on load
-      hs.search({ uid: 'jpugetgil', rows: 5 });
+      search();
     </script>
   </body>
 </html>
