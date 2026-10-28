@@ -10,6 +10,7 @@ import type {
 } from './types';
 import { isSafeColor } from './theme';
 import { normaliseOrcid } from './query';
+import { DEFAULT_LOCALE, matchLocale } from './locales';
 
 export interface ParseLimits {
   /** Upper bound for `rows`. Default: 50 */
@@ -212,6 +213,10 @@ export function parseUrlParams(params: URLSearchParams, limits?: ParseLimits): U
   const credit = bool(str(params, 'credit'));
   if (credit !== undefined) state.showCredit = credit;
 
+  // Built-in languages only ('fr-FR' → 'fr'); others are dropped, i.e. English.
+  const locale = matchLocale(str(params, 'lang'));
+  if (locale) state.locale = locale;
+
   return state;
 }
 
@@ -269,6 +274,8 @@ export function toUrlParams(state: Partial<UrlState>): URLSearchParams {
   setNumber(params, 'maxAuthors', state.maxAuthors, DEFAULTS.maxAuthors);
   setString(params, 'title', state.title);
   if (state.showCredit === false) params.set('credit', '0');
+  const locale = matchLocale(state.locale);
+  if (locale && locale !== DEFAULT_LOCALE) params.set('lang', locale);
 
   return params;
 }

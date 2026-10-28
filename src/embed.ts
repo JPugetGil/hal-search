@@ -1,6 +1,7 @@
 import type { ThemeName, UrlState } from './types';
 import { toUrlParams } from './url-params';
 import { buildHalWebUrl } from './query';
+import { SNIPPET_TITLES, resolveLocale } from './locales';
 
 // All URLs use the public scheme of url-params.ts.
 
@@ -11,24 +12,22 @@ export interface EmbedOptions extends Partial<UrlState> {
   width?: string;
   /** iframe height (CSS value). Default: '600' */
   height?: string;
-  /** iframe title (accessibility). Default: 'Publications from HAL' */
+  /** iframe title (accessibility). Default: 'Publications from HAL', in the language of `locale` */
   iframeTitle?: string;
 }
 
 export interface MarkdownSnippetOptions extends Partial<UrlState> {
   /** Base URL of the SSR SVG service, e.g. 'https://hal-search.vercel.app' */
   svgBase: string;
-  /** Image alt text. Default: 'Publications from HAL' */
+  /** Image alt text. Default: 'Publications from HAL', in the language of `locale` */
   alt?: string;
   /** Emit a <picture> with light and dark sources (GitHub dark mode). Default: false */
   darkMode?: boolean;
 }
 
-const DEFAULT_TITLE = 'Publications from HAL';
-
 /**
  * `<hal-search>` attribute name of each URL param (kebab-case, `title` → `svg-title`
- * because the global `title` attribute would show a tooltip).
+ * because the global `title` attribute would show a tooltip; `lang` is the global attribute).
  */
 export const WEB_COMPONENT_ATTRIBUTES: Readonly<Record<string, string>> = {
   idHal: 'id-hal',
@@ -55,6 +54,7 @@ export const WEB_COMPONENT_ATTRIBUTES: Readonly<Record<string, string>> = {
   maxAuthors: 'max-authors',
   title: 'svg-title',
   credit: 'credit',
+  lang: 'lang',
 };
 
 // ---------------------------------------------------------------------------
@@ -69,6 +69,11 @@ function escapeAttr(value: string): string {
     .replace(/'/g, '&#39;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+/** Default iframe title / image alt in the snippet's language ('Publications from HAL'). */
+function defaultTitle(locale: string | undefined): string {
+  return SNIPPET_TITLES[resolveLocale(locale)] ?? SNIPPET_TITLES.en;
 }
 
 /** Base URL without trailing slashes. */
@@ -127,7 +132,7 @@ export function buildEmbedUrl(options: EmbedOptions): string {
 /** Ready-to-paste, attribute-escaped `<iframe>` snippet. */
 export function buildEmbedSnippet(options: EmbedOptions): string {
   const src = buildEmbedUrl(options);
-  const title = options.iframeTitle?.trim() || DEFAULT_TITLE;
+  const title = options.iframeTitle?.trim() || defaultTitle(options.locale);
   const width = options.width?.trim() || '100%';
   const height = options.height?.trim() || '600';
   return (
@@ -144,7 +149,7 @@ export function buildSvgUrl(svgBase: string, state: Partial<UrlState>): string {
 /** Markdown (or <picture> HTML when darkMode) for a README, wrapped in a link to the list on HAL. */
 export function buildMarkdownSnippet(options: MarkdownSnippetOptions): string {
   const state = stateOf(options, ['svgBase', 'alt', 'darkMode']);
-  const alt = options.alt?.trim() || DEFAULT_TITLE;
+  const alt = options.alt?.trim() || defaultTitle(options.locale);
   // Same filters as the image, so the link lists what the image counts.
   const halUrl = buildHalWebUrl(state.query ?? {}, state.filters);
 

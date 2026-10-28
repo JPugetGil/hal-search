@@ -1,4 +1,5 @@
 import type { DetailLevel, LevelName } from './types';
+import { domainLabelField } from './locales';
 
 // ---------------------------------------------------------------------------
 // Field lists (explicit: `fl=*` is about 10x heavier and is never used)
@@ -26,13 +27,16 @@ const BASIC_FIELDS = [
   'fileMain_s',
 ] as const;
 
+/** HAL domain labels in English (replaced by the locale's field in resolveFields). */
+const EN_DOMAIN_FIELD = 'en_domainAllCodeLabel_fs';
+
 /** lvl 2: + Open Access badge, keywords, domains, citation to copy. */
 const DETAILED_FIELDS = [
   ...BASIC_FIELDS,
   'openAccess_bool',
   'keyword_s',
   'domain_s',
-  'en_domainAllCodeLabel_fs',
+  EN_DOMAIN_FIELD,
   'citationFull_s',
 ] as const;
 
@@ -55,9 +59,14 @@ export const LEVEL_NAMES: Record<DetailLevel, LevelName> = {
   3: 'full',
 };
 
-/** Returns the `fl` field string for the given detail level (level 1 for unknown levels) */
-export function resolveFields(lvl: DetailLevel): string {
-  return Object.prototype.hasOwnProperty.call(LEVEL_FIELDS, lvl) ? LEVEL_FIELDS[lvl] : LEVEL_FIELDS[1];
+/**
+ * Returns the `fl` field string for the given detail level (level 1 for unknown levels).
+ * From level 2, the domain labels are fetched in the language of `locale` (default: English).
+ */
+export function resolveFields(lvl: DetailLevel, locale?: string): string {
+  const fields = Object.prototype.hasOwnProperty.call(LEVEL_FIELDS, lvl) ? LEVEL_FIELDS[lvl] : LEVEL_FIELDS[1];
+  const domainField = domainLabelField(locale);
+  return domainField === EN_DOMAIN_FIELD ? fields : fields.replace(EN_DOMAIN_FIELD, domainField);
 }
 
 // ---------------------------------------------------------------------------

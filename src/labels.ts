@@ -1,52 +1,29 @@
 import type { Labels } from './types';
-import { DOC_TYPE_LABELS } from './doctypes';
+import { DEFAULT_LOCALE, LOCALES, resolveLocale } from './locales';
 
 // ---------------------------------------------------------------------------
 // Defaults
 // ---------------------------------------------------------------------------
 
-/** English defaults for every user-facing string. */
-export const DEFAULT_LABELS: Labels = Object.freeze({
-  loading: 'Loading…',
-  empty: 'No results found.',
-  error: 'Error: {message}',
-  previous: 'Previous',
-  next: 'Next',
-  pageInfo: 'Page {page} of {pages}',
-  resultCount: '{count} results',
-  resultCountOne: '{count} result',
-  pagination: 'Search results pages',
-  openAccess: 'Open Access',
-  abstract: 'Abstract',
-  showMore: 'Show more',
-  showLess: 'Show less',
-  untitled: 'Untitled',
-  etAl: 'et al.',
-  pdf: 'PDF',
-  doi: 'DOI',
-  bibtex: 'BibTeX',
-  copyCitation: 'Copy citation',
-  copied: 'Copied!',
-  viewOnHal: 'View all {count} publications on HAL',
-  viewOnHalOne: 'View this publication on HAL',
-  title: 'Publications',
-  opensInNewTab: '(opens in a new tab)',
-  undated: 'Undated',
-  docTypes: DOC_TYPE_LABELS,
-});
+/** English defaults for every user-facing string (other languages: LOCALES in locales.ts). */
+export const DEFAULT_LABELS: Labels = LOCALES[DEFAULT_LOCALE];
 
 // ---------------------------------------------------------------------------
 // Resolution
 // ---------------------------------------------------------------------------
 
-/** Merges overrides over the English defaults (docTypes merged key by key). */
-export function resolveLabels(overrides?: Partial<Labels>): Labels {
-  // Fresh docTypes object: callers may mutate the result without touching DOC_TYPE_LABELS.
-  const labels: Labels = { ...DEFAULT_LABELS, docTypes: { ...DEFAULT_LABELS.docTypes } };
+/**
+ * Merges overrides over the labels of a built-in locale (docTypes merged key by key).
+ * `locale` is a language tag ('fr', 'fr-FR'...); unknown or missing locales use English.
+ */
+export function resolveLabels(overrides?: Partial<Labels>, locale?: string): Labels {
+  const base = LOCALES[resolveLocale(locale)];
+  // Fresh docTypes object: callers may mutate the result without touching the built-in labels.
+  const labels: Labels = { ...base, docTypes: { ...base.docTypes } };
   if (!overrides || typeof overrides !== 'object') return labels;
 
   // Overrides may come from user JSON (web component `labels` attribute): copy known string keys only.
-  for (const key of Object.keys(DEFAULT_LABELS) as (keyof Labels)[]) {
+  for (const key of Object.keys(base) as (keyof Labels)[]) {
     if (key === 'docTypes') continue;
     const value = (overrides as Record<string, unknown>)[key];
     if (typeof value === 'string') (labels as unknown as Record<string, string>)[key] = value;

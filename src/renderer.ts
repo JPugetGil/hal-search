@@ -16,6 +16,7 @@ import { formatLabel } from './labels';
 import { getDocLinks } from './links';
 import type { DocLinks } from './links';
 import { normalizeDomains } from './levels';
+import { getDomainLabels } from './locales';
 
 // ---------------------------------------------------------------------------
 // Render context
@@ -47,6 +48,8 @@ export interface HtmlRenderContext {
   highlightAuthors: string[];
   /** Show the "hal-search" credit link */
   showCredit: boolean;
+  /** Built-in locale of the labels: formats the result count. Default: the closest `lang` of the container */
+  locale?: string;
   /** Called with the 1-based page number when a pagination button is clicked */
   onPageChange: (page: number) => void;
   /** true when this render follows a pagination click: move focus to the start of the results */
@@ -153,9 +156,9 @@ function docLang(doc: HalDoc): string | undefined {
   return LANG_RE.test(code) && code.toLowerCase() !== 'und' ? code : undefined;
 }
 
-/** Locale-formatted count, using the closest `lang` of the container (falls back to the runtime locale). */
-function formatCount(n: number, container: HTMLElement): string {
-  const lang = container.closest('[lang]')?.getAttribute('lang') || document.documentElement.lang || undefined;
+/** Locale-formatted count: `locale`, else the closest `lang` of the container (falls back to the runtime locale). */
+function formatCount(n: number, container: HTMLElement, locale?: string): string {
+  const lang = locale || container.closest('[lang]')?.getAttribute('lang') || document.documentElement.lang || undefined;
   try {
     return n.toLocaleString(lang);
   } catch {
@@ -449,7 +452,7 @@ function buildDetails(doc: HalDoc, lang: string | undefined, ctx: HtmlRenderCont
   if (keywords.length) details.appendChild(buildTagList(keywords, 'hal-article__keywords', 'hal-tag'));
 
   const rawDomains = Array.isArray(doc.domain_s) ? doc.domain_s : [];
-  const domainLabels = Array.isArray(doc.en_domainAllCodeLabel_fs) ? doc.en_domainAllCodeLabel_fs : undefined;
+  const domainLabels = getDomainLabels(doc, ctx.locale);
   if (rawDomains.length || domainLabels?.length) {
     const domains = dedupe(
       normalizeDomains(rawDomains, domainLabels).map((d) => normalizeSpace(decodeEntities(String(d)))),
@@ -665,7 +668,7 @@ export function renderResults(container: HTMLElement, docs: HalDoc[], ctx: HtmlR
   } else {
     const total = Math.max(ctx.pagination.totalFound, docs.length);
     const template = total === 1 ? ctx.labels.resultCountOne : ctx.labels.resultCount;
-    let summary = formatLabel(template, { count: formatCount(total, container) });
+    let summary = formatLabel(template, { count: formatCount(total, container, ctx.locale) });
     if (totalPages > 1) {
       const page = Math.min(totalPages, Math.max(1, Math.floor(ctx.pagination.currentPage) || 1));
       summary += `, ${formatLabel(ctx.labels.pageInfo, { page, pages: totalPages })}`;

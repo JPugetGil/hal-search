@@ -23,6 +23,8 @@ export interface HalDoc {
   keyword_s?: string[];
   domain_s?: string[];
   en_domainAllCodeLabel_fs?: string[];
+  /** French domain labels, fetched instead of en_domainAllCodeLabel_fs for locale 'fr' */
+  fr_domainAllCodeLabel_fs?: string[];
   language_s?: string[];
   peerReviewing_s?: string;
   conferenceTitle_s?: string;
@@ -126,7 +128,7 @@ export interface Labels {
   pageInfo: string;
   /** '{count} results' — count is already locale-formatted */
   resultCount: string;
-  /** Singular form of resultCount: '{count} result' */
+  /** Singular form of resultCount: '{count} result' (plural category 'one' of the locale: 0 and 1 in French) */
   resultCountOne: string;
   /** aria-label of the pagination nav: 'Search results pages' */
   pagination: string;
@@ -178,6 +180,12 @@ export interface DisplayOptions extends ColorOptions {
   highlightAuthors?: string[];
   /** Max authors shown before "et al.". Default: 10. 0 = no limit */
   maxAuthors?: number;
+  /**
+   * Language of the labels and of number formatting: 'en' (default) or 'fr'. Region subtags are
+   * accepted ('fr-FR' → 'fr'); other languages fall back to English. `labels` overrides apply on top.
+   * HTML output: also sets the `lang` attribute of the container.
+   */
+  locale?: string;
   /** Override any user-facing string */
   labels?: Partial<Labels>;
   /** Show the "hal-search" credit link. Default: true */
@@ -232,6 +240,8 @@ export interface FetchParams {
   rows: number;
   start: number;
   apiBase?: string;
+  /** Language of the domain labels fetched from lvl 2 ('fr' → fr_domainAllCodeLabel_fs). Default: English */
+  locale?: string;
   signal?: AbortSignal;
 }
 

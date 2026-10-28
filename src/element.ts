@@ -38,6 +38,8 @@ const URL_ATTRIBUTES: Readonly<Record<string, string>> = {
   credit: 'credit',
   // The global `title` attribute would show a tooltip.
   'svg-title': 'title',
+  // The global `lang` attribute: language of the labels ('en', 'fr'), also right for assistive tech.
+  lang: 'lang',
 };
 
 const COLOR_KEYS = ['backgroundColor', 'textColor', 'mainColor'] as const;
@@ -123,6 +125,7 @@ function readSnapshot(el: Element): ElementSnapshot | undefined {
       maxAuthors: state.maxAuthors,
       showCredit: state.showCredit,
       title: state.title,
+      locale: state.locale,
       headingLevel: parseHeadingLevel(el.getAttribute('heading-level')),
       labels: parseLabelsAttribute(el.getAttribute('labels')),
       apiBase: apiBase || undefined,

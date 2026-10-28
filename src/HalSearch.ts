@@ -17,6 +17,7 @@ import type { Palette } from './theme';
 import { fetchArticles } from './api';
 import { buildHalWebUrl } from './query';
 import { resolveLabels } from './labels';
+import { resolveLocale } from './locales';
 import { isSafeColor, paletteToCssVars, resolvePalette } from './theme';
 import { renderError, renderLoading, renderResults } from './renderer';
 import { renderSvg } from './svg';
@@ -85,6 +86,10 @@ export class HalSearch {
   private readonly output: OutputFormat;
   private readonly labels: Labels;
   private readonly labelOverrides?: Partial<Labels>;
+  /** Built-in locale when the `locale` option is given (unknown → 'en'); undefined: page language */
+  private readonly locale?: string;
+  /** `lang` attribute of the container before this instance set it (restored by destroy()) */
+  private readonly previousLang: string | null;
   private readonly apiBase?: string;
   private readonly defaultFilters: HalFilters;
   private readonly defaultSort: SortOrder;
@@ -130,7 +135,8 @@ export class HalSearch {
     this.container = resolveContainer(options.container);
     this.output = options.output === 'svg' ? 'svg' : HAL_SEARCH_DEFAULTS.output;
     this.labelOverrides = options.labels;
-    this.labels = resolveLabels(options.labels);
+    this.locale = typeof options.locale === 'string' && options.locale.trim() ? resolveLocale(options.locale) : undefined;
+    this.labels = resolveLabels(options.labels, this.locale);
     this.apiBase = options.apiBase;
     this.defaultFilters = mergeFilters({}, options.filters);
     this.defaultSort = options.sort ?? HAL_SEARCH_DEFAULTS.sort;
@@ -156,6 +162,9 @@ export class HalSearch {
 
     this.addedClass = !this.container.classList.contains('hal-search');
     this.container.classList.add('hal-search');
+    // Screen readers pronounce the labels in their language (titles keep their own `lang`).
+    this.previousLang = this.container.getAttribute('lang');
+    if (this.locale) this.container.setAttribute('lang', this.locale);
     this._applyAppearance();
 
     if (options.injectStyles !== false) {
@@ -258,6 +267,10 @@ export class HalSearch {
     this.appliedVars = [];
     this._setColorsStyle({}, {});
     this.container.removeAttribute('data-hal-theme');
+    if (this.locale) {
+      if (this.previousLang === null) this.container.removeAttribute('lang');
+      else this.container.setAttribute('lang', this.previousLang);
+    }
     if (this.addedClass) this.container.classList.remove('hal-search');
     if (this.container.classList.length === 0) this.container.removeAttribute('class');
   }
@@ -306,6 +319,7 @@ export class HalSearch {
         rows: this.rows,
         start,
         apiBase: this.apiBase,
+        locale: this.locale,
         signal: controller.signal,
       });
       if (token !== this.token) return undefined;
@@ -354,6 +368,7 @@ export class HalSearch {
         groupBy: this.groupBy,
         highlightAuthors: this.highlightAuthors,
         maxAuthors: this.maxAuthors,
+        locale: this.locale,
         labels: this.labelOverrides,
         showCredit: this.showCredit,
         ...this.colors,
@@ -376,6 +391,7 @@ export class HalSearch {
       maxAuthors: this.maxAuthors,
       highlightAuthors: this.highlightAuthors,
       showCredit: this.showCredit,
+      locale: this.locale,
       onPageChange: (target: number) => {
         void this._goTo(target, true);
       },

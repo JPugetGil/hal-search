@@ -30,6 +30,7 @@ export async function fetchSvg(options: FetchSvgOptions): Promise<string> {
       rows,
       start: (p - 1) * rows,
       apiBase: options.apiBase,
+      locale: options.locale,
       signal: options.signal,
     });
 
@@ -56,6 +57,7 @@ export async function fetchSvg(options: FetchSvgOptions): Promise<string> {
     groupBy: options.groupBy,
     highlightAuthors: options.highlightAuthors,
     maxAuthors: options.maxAuthors,
+    locale: options.locale,
     labels: options.labels,
     showCredit: options.showCredit,
     backgroundColor: options.backgroundColor,
