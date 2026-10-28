@@ -1,34 +1,69 @@
 {
   "name": "hal-search",
-  "version": "0.4.0",
-  "description": "A library to display article descriptions fetched from the HAL Open Archive API",
+  "version": "0.5.0",
+  "description": "Display publications from the HAL open archive on any website or GitHub README: HTML cards, web component or SVG.",
+  "keywords": [
+    "hal",
+    "hal-science",
+    "open-archive",
+    "publications",
+    "bibliography",
+    "academic",
+    "research",
+    "svg",
+    "web-component",
+    "readme"
+  ],
+  "author": "Jey Puget Gil",
+  "license": "MIT",
+  "homepage": "https://github.com/JPugetGil/hal-search#readme",
   "repository": {
-    "url": "https://github.com/JPugetGil/hal-search"
+    "type": "git",
+    "url": "git+https://github.com/JPugetGil/hal-search.git"
+  },
+  "bugs": {
+    "url": "https://github.com/JPugetGil/hal-search/issues"
   },
   "type": "module",
-  "main": "./dist/hal-search.umd.js",
+  "main": "./dist/hal-search.cjs",
   "module": "./dist/hal-search.es.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/hal-search.es.js",
-      "require": "./dist/hal-search.umd.js"
-    }
+      "require": "./dist/hal-search.cjs"
+    },
+    "./dist/hal-search.min.js": "./dist/hal-search.min.js",
+    "./package.json": "./package.json"
   },
+  "unpkg": "./dist/hal-search.min.js",
+  "jsdelivr": "./dist/hal-search.min.js",
   "files": [
     "dist"
   ],
+  "sideEffects": [
+    "./dist/hal-search.min.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.config.cdn.ts",
     "preview": "vite preview",
-    "example": "npm run build && npx serve -l 8080 example",
-    "publish": "npm run build && npm publish --access public"
+    "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "example": "npm run build && node -e \"require('fs').copyFileSync('dist/hal-search.es.js','example/hal-search.es.js')\" && npx serve -l 8080 example",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {
+    "happy-dom": "^21.0.4",
     "typescript": "^5.4.0",
     "vite": "^8.0.0",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^5.0.5"
   }
 }
