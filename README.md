@@ -521,6 +521,7 @@ Maintainer notes for the Vercel project:
 - **Skip deployments when there are no changes to the root directory**: disabled. Otherwise, changes to `src/` would not redeploy the service.
 - **Build command**: `npm run build`.
 - **Node.js**: 20 or later.
+- **Function region**: Paris (`cdg1`), set in `ssr-app/vercel.json`. HAL is hosted in France: from the default US region, HAL requests exceeded the 4 s timeout.
 - Vercel's Express support imports `server.js` and serves its default export. `listen()` is skipped when `VERCEL` is set.
 
 ---

@@ -239,6 +239,8 @@ export async function handleSvgRequest(
 async function fetchHal(url: string, deps: HandlerDeps): Promise<HalApiResponse> {
   const doFetch = deps.fetch ?? globalThis.fetch;
   const signal = AbortSignal.timeout(deps.timeoutMs ?? HAL_TIMEOUT_MS);
+  // Logged with every upstream failure: tells a slow HAL apart from a network problem.
+  const startedAt = Date.now();
 
   let data: unknown;
   try {
@@ -249,14 +251,14 @@ async function fetchHal(url: string, deps: HandlerDeps): Promise<HalApiResponse>
     if (!res.ok) {
       // 400 = invalid Solr syntax or parameter: the URL must be fixed, retrying won't help.
       const userMessage = res.status === 400 ? ERROR_MESSAGES.badQuery : ERROR_MESSAGES.upstream;
-      throw new UpstreamError(`HAL API HTTP ${res.status} for ${url}`, userMessage);
+      throw new UpstreamError(`HAL API HTTP ${res.status} after ${Date.now() - startedAt} ms for ${url}`, userMessage);
     }
     data = await res.json();
   } catch (err) {
     if (err instanceof UpstreamError) throw err;
     const timedOut = signal.aborted;
     throw new UpstreamError(
-      `HAL API ${timedOut ? 'timeout' : 'request failed'} for ${url}`,
+      `HAL API ${timedOut ? 'timeout' : 'request failed'} after ${Date.now() - startedAt} ms for ${url}`,
       timedOut ? ERROR_MESSAGES.timeout : ERROR_MESSAGES.upstream,
       err,
     );
