@@ -276,15 +276,21 @@ describe('parseUrlParams(toUrlParams(x))', () => {
     expect(parseUrlParams(params).query).toEqual({ orcid: '0000-0002-1825-009X' });
   });
 
-  it('round-trips lang: built-in locales only, English implied', () => {
+  it('round-trips lang: built-in locales only', () => {
     expect(toUrlParams({ query: { idHal: 'a' }, locale: 'fr' }).toString()).toBe('idHal=a&lang=fr');
     expect(parseUrlParams(toUrlParams({ query: { idHal: 'a' }, locale: 'fr' })).locale).toBe('fr');
     // Canonical form: region subtags and case are normalised
     expect(toUrlParams({ query: {}, locale: 'FR-ca' }).toString()).toBe('lang=fr');
-    // Default and unknown languages are omitted
-    expect(toUrlParams({ query: {}, locale: 'en' }).toString()).toBe('');
+    // Unknown languages are dropped; no locale, no lang
     expect(toUrlParams({ query: {}, locale: 'de' }).toString()).toBe('');
     expect(toUrlParams({ query: {}, locale: '"><x' }).toString()).toBe('');
+    expect(toUrlParams({ query: { idHal: 'a' } }).toString()).toBe('idHal=a');
+  });
+
+  it('keeps an explicit English (it is not lost on a round trip)', () => {
+    expect(toUrlParams({ query: {}, locale: 'en' }).toString()).toBe('lang=en');
+    expect(toUrlParams({ query: {}, locale: 'en-GB' }).toString()).toBe('lang=en');
+    expect(parseUrlParams(toUrlParams(parse('idHal=a&lang=en'))).locale).toBe('en');
   });
 
   it('round-trips legacy URLs into the new scheme', () => {

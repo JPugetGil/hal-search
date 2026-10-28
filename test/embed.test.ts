@@ -191,11 +191,13 @@ describe('buildWebComponentSnippet', () => {
     expect(buildWebComponentSnippet({})).toBe('<hal-search></hal-search>');
   });
 
-  it('sets the global lang attribute for a non-default locale', () => {
+  it('sets the global lang attribute whenever a built-in locale is given', () => {
     expect(buildWebComponentSnippet({ query: { idHal: 'a' }, locale: 'fr' })).toBe('<hal-search id-hal="a" lang="fr"></hal-search>');
     expect(buildWebComponentSnippet({ query: { idHal: 'a' }, locale: 'fr-CA' })).toBe('<hal-search id-hal="a" lang="fr"></hal-search>');
-    // English is the default; unknown languages are dropped
-    expect(buildWebComponentSnippet({ query: { idHal: 'a' }, locale: 'en' })).toBe('<hal-search id-hal="a"></hal-search>');
+    // Explicit English too: on a page in another language, it is also what assistive technologies read.
+    expect(buildWebComponentSnippet({ query: { idHal: 'a' }, locale: 'en' })).toBe('<hal-search id-hal="a" lang="en"></hal-search>');
+    // No locale, or an unknown one: no lang (the labels are English)
+    expect(buildWebComponentSnippet({ query: { idHal: 'a' } })).toBe('<hal-search id-hal="a"></hal-search>');
     expect(buildWebComponentSnippet({ query: { idHal: 'a' }, locale: 'de' })).toBe('<hal-search id-hal="a"></hal-search>');
   });
 });
@@ -228,6 +230,14 @@ describe('snippets in French', () => {
     });
     expect(html).toContain('srcset="https://svg.example/svg?idHal=jpugetgil&amp;lang=fr&amp;theme=dark"');
     expect(html).toContain('<img src="https://svg.example/svg?idHal=jpugetgil&amp;lang=fr&amp;theme=light" alt="Mes publications">');
+  });
+
+  it('keeps an explicit English in every URL, and only then', () => {
+    expect(buildSvgUrl('https://svg.example', { query: { idHal: 'a' }, locale: 'en' })).toBe('https://svg.example/svg?idHal=a&lang=en');
+    expect(buildEmbedUrl({ embedBase: 'https://x.example', query: { idHal: 'a' }, locale: 'en' })).toBe(
+      'https://x.example/embed.html?idHal=a&lang=en',
+    );
+    expect(buildSvgUrl('https://svg.example', { query: { idHal: 'a' } })).toBe('https://svg.example/svg?idHal=a');
   });
 
   it('falls back to English for an unknown locale', () => {

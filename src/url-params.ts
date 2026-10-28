@@ -10,7 +10,7 @@ import type {
 } from './types';
 import { isSafeColor } from './theme';
 import { escapeSolrValue, normaliseOrcid } from './query';
-import { DEFAULT_LOCALE, matchLocale } from './locales';
+import { matchLocale } from './locales';
 
 export interface ParseLimits {
   /** Upper bound for `rows`. Default: 50 */
@@ -251,7 +251,12 @@ function setList(params: URLSearchParams, name: string, values: unknown): void {
   if (items.length > 0) params.set(name, items.join(','));
 }
 
-/** Serialises a state to the public URL scheme (omits defaults and empty values). */
+/**
+ * Serialises a state to the public URL scheme (omits defaults and empty values).
+ * `lang` is the exception: it is written whenever `locale` is a built-in language, English included, so
+ * an explicit choice survives (`<hal-search lang="en">` also tells assistive technologies the widget is in
+ * English on a page in another language). Without `locale`, no `lang`; unsupported languages are dropped.
+ */
 export function toUrlParams(state: Partial<UrlState>): URLSearchParams {
   const params = new URLSearchParams();
   const query = state.query ?? {};
@@ -285,7 +290,7 @@ export function toUrlParams(state: Partial<UrlState>): URLSearchParams {
   setString(params, 'title', state.title);
   if (state.showCredit === false) params.set('credit', '0');
   const locale = matchLocale(state.locale);
-  if (locale && locale !== DEFAULT_LOCALE) params.set('lang', locale);
+  if (locale) params.set('lang', locale);
 
   return params;
 }

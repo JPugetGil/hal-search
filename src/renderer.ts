@@ -16,7 +16,7 @@ import { formatLabel } from './labels';
 import { getDocLinks } from './links';
 import type { DocLinks } from './links';
 import { normalizeDomains } from './levels';
-import { getDomainLabels } from './locales';
+import { DEFAULT_LOCALE, formatNumber, getDomainLabels } from './locales';
 
 // ---------------------------------------------------------------------------
 // Render context
@@ -48,7 +48,10 @@ export interface HtmlRenderContext {
   highlightAuthors: string[];
   /** Show the "hal-search" credit link */
   showCredit: boolean;
-  /** Built-in locale of the labels: formats the result count. Default: the closest `lang` of the container */
+  /**
+   * Built-in locale of the labels: formats the result count, so that numbers and words agree.
+   * Default: English (like the labels), whatever the page language.
+   */
   locale?: string;
   /** Called with the 1-based page number when a pagination button is clicked */
   onPageChange: (page: number) => void;
@@ -179,16 +182,6 @@ function docLang(doc: HalDoc): string | undefined {
   if (!Array.isArray(langs) || langs.length !== 1 || typeof langs[0] !== 'string') return undefined;
   const code = langs[0].trim();
   return LANG_RE.test(code) && code.toLowerCase() !== 'und' ? code : undefined;
-}
-
-/** Locale-formatted count: `locale`, else the closest `lang` of the container (falls back to the runtime locale). */
-function formatCount(n: number, container: HTMLElement, locale?: string): string {
-  const lang = locale || container.closest('[lang]')?.getAttribute('lang') || document.documentElement.lang || undefined;
-  try {
-    return n.toLocaleString(lang);
-  } catch {
-    return String(n);
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -705,7 +698,8 @@ export function renderResults(container: HTMLElement, docs: HalDoc[], ctx: HtmlR
   } else {
     const total = Math.max(ctx.pagination.totalFound, docs.length);
     const template = total === 1 ? ctx.labels.resultCountOne : ctx.labels.resultCount;
-    let summary = formatLabel(template, { count: formatCount(total, container, ctx.locale) });
+    // In the language of the labels ('1,234 results'), not of the page: '1 234 results' would mix two languages.
+    let summary = formatLabel(template, { count: formatNumber(total, ctx.locale || DEFAULT_LOCALE) });
     if (totalPages > 1) {
       const page = Math.min(totalPages, Math.max(1, Math.floor(ctx.pagination.currentPage) || 1));
       summary += `, ${formatLabel(ctx.labels.pageInfo, { page, pages: totalPages })}`;

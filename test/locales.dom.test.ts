@@ -108,14 +108,15 @@ describe('renderResults in French', () => {
     expect(container.querySelector('.hal-pagination__page')?.getAttribute('aria-label')).toBe('Page 1 sur 919');
   });
 
-  it('keeps following the closest lang without an explicit locale', () => {
+  it('formats the count in English without a locale, like the labels, even on a French page', () => {
+    document.documentElement.lang = 'fr';
     const wrapper = document.createElement('div');
     wrapper.lang = 'fr';
     const container = document.createElement('div');
     wrapper.appendChild(container);
     document.body.appendChild(wrapper);
     renderResults(container, DOCS, ctx({ locale: undefined, labels: resolveLabels() }));
-    expect(liveText(container)).toBe(`${fr(9183)} results, Page 1 of 919`);
+    expect(liveText(container)).toBe('9,183 results, Page 1 of 919');
   });
 });
 
@@ -167,14 +168,15 @@ describe('HalSearch with a locale', () => {
     expect(el.getAttribute('lang')).toBe('de');
   });
 
-  it('does not touch lang without a locale (page language, English labels)', async () => {
-    const el = container('es');
+  it('does not touch lang without a locale (page language, English labels and numbers)', async () => {
+    const el = container('fr');
     const hs = new HalSearch({ container: el, injectStyles: false });
     await hs.search({ query: { idHal: 'jpugetgil' } });
-    expect(el.getAttribute('lang')).toBe('es');
+    expect(el.getAttribute('lang')).toBe('fr');
     expect(el.textContent).toContain('Journal article');
+    expect(liveText(el)).toBe('9,183 results, Page 1 of 919');
     hs.destroy();
-    expect(el.getAttribute('lang')).toBe('es');
+    expect(el.getAttribute('lang')).toBe('fr');
   });
 
   it('falls back to English for an unknown locale, and says so', async () => {
