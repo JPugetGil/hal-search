@@ -49,7 +49,12 @@ const VISUALLY_HIDDEN: Record<string, string> = {
  * host page text color, so they stay readable whatever the page background.
  * Injected first in `<head>`: page stylesheets win at equal specificity.
  */
-export const DEFAULT_CSS = `
+export const DEFAULT_CSS: string = /* @__PURE__ */ buildDefaultCss();
+
+// A function call annotated as pure can be dropped by bundlers when DEFAULT_CSS is unused (an app importing
+// only renderSvg); a template literal that calls functions cannot.
+function buildDefaultCss(): string {
+  return `
 /* hal-search — default styles (https://github.com/JPugetGil/hal-search) */
 .hal-search {
 ${declarations(BASE_VARS, '  ')}
@@ -614,6 +619,7 @@ ${themeVars(LIGHT_PALETTE, 'none', '    ')}
   }
 }
 `;
+}
 
 // ---------------------------------------------------------------------------
 // Injection

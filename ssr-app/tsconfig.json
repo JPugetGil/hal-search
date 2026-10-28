@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "paths": {
-      "hal-search": ["../src/index.ts"]
+      "hal-search": ["../src/index.ts"],
+      "hal-search/svg": ["../src/svg-entry.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

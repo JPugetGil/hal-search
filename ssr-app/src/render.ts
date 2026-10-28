@@ -5,8 +5,8 @@ import {
   parseUrlParams,
   renderErrorSvg,
   renderSvg,
-} from 'hal-search';
-import type { HalApiResponse, HalFilters, HalQuery, SvgRenderOptions, UrlState } from 'hal-search';
+} from 'hal-search/svg';
+import type { HalApiResponse, HalFilters, HalQuery, SvgRenderOptions, UrlState } from 'hal-search/svg';
 
 // DOM-free request handlers of the SVG image service (GitHub README / Markdown).
 // No global state: every request builds its own values, so concurrent requests never interfere.
