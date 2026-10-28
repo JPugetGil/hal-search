@@ -30,14 +30,24 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/hal-search.es.js",
-      "require": "./dist/hal-search.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/hal-search.es.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/hal-search.cjs"
+      }
     },
     "./svg": {
-      "types": "./dist/svg-entry.d.ts",
-      "import": "./dist/hal-search-svg.es.js",
-      "require": "./dist/hal-search-svg.cjs"
+      "import": {
+        "types": "./dist/svg-entry.d.ts",
+        "default": "./dist/hal-search-svg.es.js"
+      },
+      "require": {
+        "types": "./dist/svg-entry.d.cts",
+        "default": "./dist/hal-search-svg.cjs"
+      }
     },
     "./dist/hal-search.min.js": "./dist/hal-search.min.js",
     "./package.json": "./package.json"
