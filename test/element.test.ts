@@ -22,9 +22,16 @@ vi.mock('../src/renderer', () => ({
   renderResults: vi.fn((c: HTMLElement, docs: HalDoc[]) => {
     c.textContent = `results:${docs.map((d) => d.docid).join(',')}`;
   }),
+  renderMissingQuery: vi.fn((c: HTMLElement) => {
+    c.textContent = 'missing';
+  }),
 }));
 
-vi.mock('../src/styles', () => ({ injectDefaultStyles: vi.fn() }));
+vi.mock('../src/styles', () => ({
+  injectDefaultStyles: vi.fn(),
+  injectElementStyles: vi.fn(),
+  attachStyleSheet: vi.fn(() => ({ update: vi.fn(), remove: vi.fn() })),
+}));
 
 vi.mock('../src/svg', () => ({
   renderSvg: vi.fn((docs: HalDoc[], o: { mainColor?: string }) => `<svg data-main="${o.mainColor ?? ''}" data-count="${docs.length}"></svg>`),
@@ -75,7 +82,7 @@ import { fetchArticles } from '../src/api';
 import { parseUrlParams } from '../src/url-params';
 import { renderResults } from '../src/renderer';
 import { renderSvg } from '../src/svg';
-import { injectDefaultStyles } from '../src/styles';
+import { injectDefaultStyles, injectElementStyles } from '../src/styles';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -245,7 +252,11 @@ describe('<hal-search>', () => {
     const mount = mountOf(el);
     expect(el.shadowRoot?.mode).toBe('open');
     expect(mount.classList.contains('hal-search')).toBe(true);
-    expect(injectDefaultStyles).toHaveBeenCalledWith(el.shadowRoot);
+    // One element stylesheet in the shadow root; HalSearch does not add DEFAULT_CSS on top of it.
+    expect(injectElementStyles).toHaveBeenCalledWith(el.shadowRoot);
+    expect(injectDefaultStyles).not.toHaveBeenCalled();
+    expect(el.shadowRoot?.querySelector('style')).toBeNull();
+    expect(el.getAttribute('data-hal-theme')).toBe('light');
 
     calls[0].resolve(reply(['a']));
     await flush();
@@ -286,6 +297,8 @@ describe('<hal-search>', () => {
     expect(fetchArticles).toHaveBeenCalledTimes(1);
     expect(mount.querySelector('svg')?.getAttribute('data-main')).toBe('#222222');
     expect(mount.getAttribute('data-hal-theme')).toBe('dark');
+    // Mirrored on the host, where the shadow stylesheet declares the theme defaults
+    expect(el.getAttribute('data-hal-theme')).toBe('dark');
     expect(mount.style.getPropertyValue('--hal-accent')).toBe('#222222');
     expect(renderSvg).toHaveBeenLastCalledWith(expect.any(Array), expect.objectContaining({ theme: 'dark', mainColor: '#222222' }));
   });
@@ -336,6 +349,34 @@ describe('<hal-search>', () => {
     }
   });
 
+  it('structured-data puts the JSON-LD in the light DOM, as a child of the element', async () => {
+    const el = create({ 'id-hal': 'jdupont', 'structured-data': '' });
+    const off = create({ 'id-hal': 'jdupont', 'structured-data': 'false' });
+    await flush();
+    calls[0].resolve(reply(['a']));
+    calls[1].resolve(reply(['a']));
+    await flush();
+
+    const script = el.querySelector(':scope > script[type="application/ld+json"]');
+    expect(script).not.toBeNull();
+    expect(JSON.parse(script!.textContent ?? '')).toMatchObject({ '@type': 'ItemList', numberOfItems: 1 });
+    expect(el.shadowRoot!.querySelector('script')).toBeNull();
+    expect(off.querySelector('script')).toBeNull();
+
+    // Turning it off rebuilds the widget without it; removing the element removes it.
+    el.setAttribute('structured-data', '0');
+    await flush();
+    expect(el.querySelector('script')).toBeNull();
+    el.setAttribute('structured-data', 'true');
+    await flush();
+    calls[3].resolve(reply(['b']));
+    await flush();
+    expect(el.querySelectorAll('script')).toHaveLength(1);
+    el.remove();
+    await flush();
+    expect(el.querySelector('script')).toBeNull();
+  });
+
   it('does not search without a criterion', async () => {
     create({ lvl: '2' });
     await flush();
@@ -375,5 +416,6 @@ describe('<hal-search>', () => {
     await flush();
     expect(calls[1].params.signal?.aborted).toBe(true);
     expect(mountOf(el).innerHTML).toBe('');
+    expect(el.hasAttribute('data-hal-theme')).toBe(false);
   });
 });

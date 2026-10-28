@@ -41,6 +41,7 @@ const EN: Labels = {
   title: 'Publications',
   opensInNewTab: '(opens in a new tab)',
   undated: 'Undated',
+  missingQuery: 'No search criterion given.',
   docTypes: DOC_TYPE_LABELS,
 };
 
@@ -121,6 +122,7 @@ const FR: Labels = {
   title: 'Publications',
   opensInNewTab: '(s’ouvre dans un nouvel onglet)',
   undated: 'Sans date',
+  missingQuery: 'Aucun critère de recherche indiqué.',
   docTypes: Object.freeze(FR_DOC_TYPES) as Record<string, string>,
 };
 

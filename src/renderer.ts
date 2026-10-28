@@ -74,11 +74,31 @@ const PAGE_SLOTS = 2 * PAGE_SIBLINGS + 5;
 
 /**
  * Screen-reader-only text. Also applied inline so it stays hidden when the host
- * page disables the default stylesheet (CSSOM writes are allowed by CSP).
+ * page disables the default stylesheet. Written with `style.setProperty` (CSSOM), which a
+ * strict CSP allows, unlike `style="…"` markup or `setAttribute('style', …)`.
  */
-const VISUALLY_HIDDEN_STYLE =
-  'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;' +
-  'clip:rect(0,0,0,0);white-space:nowrap;border:0';
+const VISUALLY_HIDDEN_STYLE: Record<string, string> = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: '0',
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  'white-space': 'nowrap',
+  border: '0',
+};
+
+/** Off-screen helper textarea of the legacy copy path. */
+const COPY_AREA_STYLE: Record<string, string> = {
+  position: 'fixed',
+  top: '0',
+  left: '0',
+  width: '1px',
+  height: '1px',
+  opacity: '0',
+  'pointer-events': 'none',
+};
 
 /** BCP 47-ish language tag as found in HAL's language_s ('en', 'fr', 'pt-BR'...). */
 const LANG_RE = /^[a-z]{2,3}(?:-[a-z0-9]{1,8})*$/i;
@@ -118,9 +138,14 @@ function heading(level: number, className: string): HTMLHeadingElement {
   return node;
 }
 
+/** Inline styles through CSSOM only (allowed by a strict CSP). */
+function setStyles(node: HTMLElement, styles: Record<string, string>): void {
+  for (const [name, value] of Object.entries(styles)) node.style.setProperty(name, value);
+}
+
 function visuallyHidden<T extends HTMLElement>(node: T): T {
   node.classList.add('hal-visually-hidden');
-  node.style.cssText = VISUALLY_HIDDEN_STYLE;
+  setStyles(node, VISUALLY_HIDDEN_STYLE);
   return node;
 }
 
@@ -226,6 +251,18 @@ export function renderError(container: HTMLElement, err: Error, labels: Labels):
   live.textContent = message;
 }
 
+/**
+ * Renders the "no search criterion" notice (`labels.missingQuery`, class `hal-empty hal-empty--missing-query`)
+ * and announces it. HalSearch shows it instead of requesting the whole archive.
+ */
+export function renderMissingQuery(container: HTMLElement, labels: Labels): void {
+  const live = resetContainer(container);
+  container.removeAttribute('aria-busy');
+
+  container.appendChild(el('p', 'hal-empty hal-empty--missing-query', labels.missingQuery));
+  live.textContent = labels.missingQuery;
+}
+
 // ---------------------------------------------------------------------------
 // Article card
 // ---------------------------------------------------------------------------
@@ -305,7 +342,7 @@ function legacyCopy(value: string, returnFocus: HTMLElement): boolean {
   area.value = value;
   area.readOnly = true;
   area.setAttribute('aria-hidden', 'true');
-  area.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  setStyles(area, COPY_AREA_STYLE);
   document.body.appendChild(area);
   let ok = false;
   try {

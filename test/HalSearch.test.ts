@@ -26,9 +26,28 @@ vi.mock('../src/renderer', () => ({
     c.textContent = `results:${docs.map((d) => d.docid).join(',')}`;
     c.removeAttribute('aria-busy');
   }),
+  renderMissingQuery: vi.fn((c: HTMLElement, labels: { missingQuery: string }) => {
+    c.textContent = `missing:${labels.missingQuery}`;
+    c.removeAttribute('aria-busy');
+  }),
 }));
 
-vi.mock('../src/styles', () => ({ injectDefaultStyles: vi.fn() }));
+vi.mock('../src/styles', () => ({
+  injectDefaultStyles: vi.fn(),
+  // Same contract as the real one (tested in styles.test.ts), observable in the DOM: a <style> with the attributes.
+  attachStyleSheet: vi.fn((root: Document | ShadowRoot, css: string, attributes: Record<string, string> = {}) => {
+    const style = document.createElement('style');
+    for (const [name, value] of Object.entries(attributes)) style.setAttribute(name, value);
+    style.textContent = css;
+    (root.nodeType === 9 ? (root as Document).head : root).appendChild(style);
+    return {
+      update: (next: string) => {
+        style.textContent = next;
+      },
+      remove: () => style.remove(),
+    };
+  }),
+}));
 
 vi.mock('../src/svg', () => ({
   renderSvg: vi.fn(
@@ -37,10 +56,19 @@ vi.mock('../src/svg', () => ({
   ),
 }));
 
-vi.mock('../src/query', () => ({ buildHalWebUrl: vi.fn(() => 'https://hal.science/search/index/?q=x') }));
+vi.mock('../src/query', async (importOriginal) => {
+  // The real criterion rule (shared with the element and the SSR), a fake web URL.
+  const { buildSolrQuery, hasQueryCriterion } = await importOriginal<typeof import('../src/query')>();
+  return { buildSolrQuery, hasQueryCriterion, buildHalWebUrl: vi.fn(() => 'https://hal.science/search/index/?q=x') };
+});
 
 vi.mock('../src/labels', () => ({
-  resolveLabels: (o?: Record<string, unknown>) => ({ loading: 'Loading…', error: 'Error: {message}', ...o }),
+  resolveLabels: (o?: Record<string, unknown>) => ({
+    loading: 'Loading…',
+    error: 'Error: {message}',
+    missingQuery: 'No search criterion given.',
+    ...o,
+  }),
 }));
 
 vi.mock('../src/theme', () => {
@@ -62,7 +90,7 @@ vi.mock('../src/theme', () => {
 
 import { HalSearch } from '../src/HalSearch';
 import { fetchArticles } from '../src/api';
-import { renderError, renderLoading, renderResults } from '../src/renderer';
+import { renderError, renderLoading, renderMissingQuery, renderResults } from '../src/renderer';
 import { renderSvg } from '../src/svg';
 import { injectDefaultStyles } from '../src/styles';
 import { buildHalWebUrl } from '../src/query';
@@ -353,6 +381,191 @@ describe('HalSearch.search', () => {
     await expect(p).resolves.toBeUndefined();
     expect(container.textContent).toBe('error:HTTP 500');
     expect(onError).toHaveBeenCalledWith(expect.objectContaining({ message: 'HTTP 500' }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Query without criterion (never q=*:*)
+// ---------------------------------------------------------------------------
+
+describe('HalSearch without a search criterion', () => {
+  it.each([
+    ['an empty object', {}],
+    ['blank fields', { idHal: '  ', text: '', orcid: ' ' }],
+    ['a text made only of Solr syntax', { text: '***' }],
+    ['an empty string', '  '],
+  ])('sends no request for %s and renders labels.missingQuery', async (_name, query) => {
+    controlFetch();
+    const onResults = vi.fn();
+    const onError = vi.fn();
+    const hs = new HalSearch({ container, onResults, onError, labels: { missingQuery: 'Nothing to show' } });
+    await expect(hs.search({ query })).resolves.toBeUndefined();
+
+    expect(fetchArticles).not.toHaveBeenCalled();
+    expect(renderLoading).not.toHaveBeenCalled();
+    expect(renderMissingQuery).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(renderMissingQuery).mock.calls[0][0]).toBe(container);
+    expect(container.textContent).toBe('missing:Nothing to show');
+    expect(container.hasAttribute('aria-busy')).toBe(false);
+    expect(onResults).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+    expect(hs.state).toMatchObject({ query, page: 1, totalFound: 0 });
+  });
+
+  it('also covers a JS caller that omits the query', async () => {
+    controlFetch();
+    const hs = new HalSearch({ container });
+    await expect(hs.search({} as never)).resolves.toBeUndefined();
+    expect(fetchArticles).not.toHaveBeenCalled();
+    expect(container.textContent).toBe('missing:No search criterion given.');
+    expect(hs.state.query).toEqual({});
+  });
+
+  it('aborts the request in flight and ignores its late response', async () => {
+    const calls = controlFetch({ honorAbort: false });
+    const hs = new HalSearch({ container });
+    const first = hs.search({ query: { idHal: 'x' } });
+    const second = hs.search({ query: { text: '?' } });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].params.signal?.aborted).toBe(true);
+
+    calls[0].resolve(reply(['late'], 1));
+    await expect(first).resolves.toBeUndefined();
+    await expect(second).resolves.toBeUndefined();
+    expect(renderResults).not.toHaveBeenCalled();
+    expect(container.textContent).toBe('missing:No search criterion given.');
+  });
+
+  it('page and level changes stay without a request', async () => {
+    controlFetch();
+    const hs = new HalSearch({ container, output: 'svg' });
+    await hs.search({ query: {}, page: 3 });
+    await expect(hs.nextPage()).resolves.toBeUndefined();
+    await expect(hs.goToPage(5)).resolves.toBeUndefined();
+    await expect(hs.setLevel(2)).resolves.toBeUndefined();
+    hs.setColors({ mainColor: '#123456' });
+    expect(fetchArticles).not.toHaveBeenCalled();
+    expect(renderSvg).not.toHaveBeenCalled();
+    expect(renderMissingQuery).toHaveBeenCalledTimes(4);
+    expect(hs.state.page).toBe(1);
+  });
+
+  it('still sends an explicit raw Solr query, and a query with any criterion', async () => {
+    const calls = controlFetch();
+    const hs = new HalSearch({ container });
+    void hs.search({ query: '*:*' });
+    void hs.search({ query: { text: '* graph' } });
+    void hs.search({ query: { collection: 'LIRIS' } });
+    expect(calls.map((c) => c.params.query)).toEqual(['*:*', { text: '* graph' }, { collection: 'LIRIS' }]);
+    expect(renderMissingQuery).not.toHaveBeenCalled();
+  });
+
+  it('an invalid query is reported by the request, not shown as missing', async () => {
+    const calls = controlFetch();
+    const onError = vi.fn();
+    const hs = new HalSearch({ container, onError });
+    const p = hs.search({ query: { structId: 'abc' } });
+    expect(calls).toHaveLength(1);
+    calls[0].reject(new Error('Invalid HAL structId "abc": expected digits only.'));
+    await p;
+    expect(renderMissingQuery).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Structured data (JSON-LD)
+// ---------------------------------------------------------------------------
+
+describe('HalSearch structuredData', () => {
+  const ldScripts = (root: ParentNode = document) =>
+    [...root.querySelectorAll<HTMLScriptElement>('script[type="application/ld+json"]')];
+  const titled = (ids: string[], numFound = ids.length): HalApiResponse => {
+    const response = reply(ids, numFound);
+    response.response.docs = ids.map((docid) => ({ docid, title_s: [`Paper ${docid}`], uri_s: `https://hal.science/hal-${docid}` }));
+    return response;
+  };
+
+  it('is off by default', async () => {
+    const calls = controlFetch();
+    const hs = new HalSearch({ container });
+    const p = hs.search({ query: 'x' });
+    calls[0].resolve(titled(['a']));
+    await p;
+    expect(ldScripts()).toHaveLength(0);
+  });
+
+  it('describes the displayed page, replaces it on each render and removes it while loading and on destroy', async () => {
+    const calls = controlFetch();
+    const hs = new HalSearch({ container, rows: 2, structuredData: true });
+    const p = hs.search({ query: 'x' });
+    calls[0].resolve(titled(['a', 'b'], 5));
+    await p;
+
+    const [first] = ldScripts();
+    expect(first.parentNode).toBe(container);
+    expect(first.getAttribute('data-hal-search-ld')).toMatch(/^[a-z0-9]+$/);
+    const data = JSON.parse(first.textContent ?? '');
+    expect(data).toMatchObject({ '@type': 'ItemList', numberOfItems: 5 });
+    expect(data.itemListElement.map((e: { position: number; item: { name: string } }) => [e.position, e.item.name])).toEqual([
+      [1, 'Paper a'],
+      [2, 'Paper b'],
+    ]);
+
+    const next = hs.nextPage();
+    expect(ldScripts()).toHaveLength(0);
+    calls[1].resolve(titled(['c', 'd'], 5));
+    await next;
+    expect(ldScripts()).toHaveLength(1);
+    expect(JSON.parse(ldScripts()[0].textContent ?? '').itemListElement[0].position).toBe(3);
+
+    hs.destroy();
+    expect(ldScripts()).toHaveLength(0);
+  });
+
+  it('is absent for empty results, errors and queries without criterion', async () => {
+    const calls = controlFetch();
+    const hs = new HalSearch({ container, structuredData: true });
+    const p = hs.search({ query: 'x' });
+    calls[0].resolve(titled(['a']));
+    await p;
+    expect(ldScripts()).toHaveLength(1);
+
+    const empty = hs.search({ query: 'nothing' });
+    calls[1].resolve(titled([]));
+    await empty;
+    expect(ldScripts()).toHaveLength(0);
+
+    const failing = hs.search({ query: 'y' });
+    calls[2].reject(new Error('HTTP 500'));
+    await failing;
+    expect(ldScripts()).toHaveLength(0);
+
+    await hs.search({ query: {} });
+    expect(ldScripts()).toHaveLength(0);
+  });
+
+  it('goes to the shadow host (light DOM) when the container lives in a shadow root, SVG output included', async () => {
+    const calls = controlFetch();
+    const host = document.createElement('section');
+    document.body.appendChild(host);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const inner = document.createElement('div');
+    shadow.appendChild(inner);
+    const hs = new HalSearch({ container: inner, output: 'svg', structuredData: true });
+    const p = hs.search({ query: 'x' });
+    calls[0].resolve(titled(['a']));
+    await p;
+
+    expect(ldScripts(shadow)).toHaveLength(0);
+    expect(ldScripts(host)).toHaveLength(1);
+    expect(ldScripts()[0].parentNode).toBe(host);
+
+    // Re-rendering the SVG (new colors) keeps a single, up-to-date description.
+    hs.setColors({ mainColor: '#123456' });
+    expect(ldScripts(host)).toHaveLength(1);
+    hs.destroy();
+    expect(ldScripts(host)).toHaveLength(0);
   });
 });
 

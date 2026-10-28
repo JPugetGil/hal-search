@@ -2,6 +2,7 @@ import type { ColorOptions, HalApiResponse, HalSearchOptions, Labels, SearchPara
 import { HalSearch, HAL_SEARCH_DEFAULTS } from './HalSearch';
 import { hasQueryCriterion } from './query';
 import { parseUrlParams } from './url-params';
+import { injectElementStyles } from './styles';
 
 // Node safety: this module is imported by index.ts, which the SSR imports in Node.
 // Nothing at module level may touch HTMLElement, customElements, window or document:
@@ -48,7 +49,7 @@ const COLOR_KEYS = ['backgroundColor', 'textColor', 'mainColor'] as const;
 const BOOLEAN_ATTRIBUTES = new Set(['oa', 'credit']);
 
 /** Attributes only understood by the web component. */
-const WIDGET_ATTRIBUTES = ['heading-level', 'labels', 'api-base'];
+const WIDGET_ATTRIBUTES = ['heading-level', 'labels', 'api-base', 'structured-data'];
 
 /** Every attribute observed by `<hal-search>`. Annotated pure: bundlers drop it from apps that never use it. */
 export const HAL_SEARCH_ATTRIBUTES: readonly string[] = /* @__PURE__ */ Object.keys(URL_ATTRIBUTES).concat(WIDGET_ATTRIBUTES);
@@ -98,6 +99,16 @@ function parseHeadingLevel(value: string | null): 2 | 3 | 4 | 5 | 6 | undefined 
   return n === 2 || n === 3 || n === 4 || n === 5 || n === 6 ? n : undefined;
 }
 
+/**
+ * Widget-only boolean attribute: present means true (`<hal-search structured-data>`), except the values
+ * `false` and `0` (frameworks such as React 18 write `structured-data="false"`). Absent: undefined.
+ */
+function parseBooleanAttribute(value: string | null): true | undefined {
+  if (value === null) return undefined;
+  const v = value.trim().toLowerCase();
+  return v === 'false' || v === '0' ? undefined : true;
+}
+
 // ---------------------------------------------------------------------------
 // Element
 // ---------------------------------------------------------------------------
@@ -129,6 +140,7 @@ function readSnapshot(el: Element): ElementSnapshot | undefined {
       headingLevel: parseHeadingLevel(el.getAttribute('heading-level')),
       labels: parseLabelsAttribute(el.getAttribute('labels')),
       apiBase: apiBase || undefined,
+      structuredData: parseBooleanAttribute(el.getAttribute('structured-data')),
     },
     appearance: {
       theme: state.theme ?? HAL_SEARCH_DEFAULTS.theme,
@@ -166,12 +178,12 @@ function createElementClass(): CustomElementConstructor {
     constructor() {
       super();
       const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
-      const hostStyle = document.createElement('style');
-      hostStyle.textContent = ':host{display:block}:host([hidden]){display:none}';
       this.mount = document.createElement('div');
-      // Lets the host page theme the widget: hal-search::part(container) { --hal-accent: ... }
+      // Lets the host page adjust the layout: hal-search::part(container) { max-width: 40rem }
       this.mount.setAttribute('part', 'container');
-      root.replaceChildren(hostStyle, this.mount);
+      root.replaceChildren(this.mount);
+      // Theme defaults on :host, so `hal-search { --hal-accent: … }` in the page wins over them.
+      injectElementStyles(root);
     }
 
     connectedCallback(): void {
@@ -207,12 +219,20 @@ function createElementClass(): CustomElementConstructor {
       const appearanceKey = JSON.stringify(snapshot.appearance);
       const searchKey = JSON.stringify(snapshot.search);
 
+      // Selects the theme defaults declared on :host (see elementCss).
+      if (this.getAttribute('data-hal-theme') !== snapshot.appearance.theme) {
+        this.setAttribute('data-hal-theme', snapshot.appearance.theme);
+      }
+
       if (!this.instance || configKey !== this.configKey) {
         this.instance?.destroy();
         this.instance = new HalSearch({
           ...snapshot.config,
           ...snapshot.appearance,
           container: this.mount,
+          // The element's own stylesheet is injected by the constructor; the style root receives the
+          // per-instance color overrides of the 'auto' theme.
+          injectStyles: false,
           styleRoot: this.shadowRoot ?? undefined,
           onResults: (response: HalApiResponse) => this._emit('hal-results', { response }),
           onError: (error: Error) => this._emit('hal-error', { error }),
@@ -245,6 +265,7 @@ function createElementClass(): CustomElementConstructor {
     private _teardown(): void {
       this.instance?.destroy();
       this.instance = undefined;
+      this.removeAttribute('data-hal-theme');
       this.configKey = '';
       this.appearanceKey = '';
       this.appearance = undefined;
