@@ -48,8 +48,8 @@ const BOOLEAN_ATTRIBUTES = new Set(['oa', 'credit']);
 /** Attributes only understood by the web component. */
 const WIDGET_ATTRIBUTES = ['heading-level', 'labels', 'api-base'];
 
-/** Every attribute observed by `<hal-search>`. */
-export const HAL_SEARCH_ATTRIBUTES: readonly string[] = [...Object.keys(URL_ATTRIBUTES), ...WIDGET_ATTRIBUTES];
+/** Every attribute observed by `<hal-search>`. Annotated pure: bundlers drop it from apps that never use it. */
+export const HAL_SEARCH_ATTRIBUTES: readonly string[] = /* @__PURE__ */ Object.keys(URL_ATTRIBUTES).concat(WIDGET_ATTRIBUTES);
 
 /** Converts the element attributes to the public URL scheme, the input of parseUrlParams. */
 export function attributesToUrlParams(el: Pick<Element, 'getAttribute'>): URLSearchParams {
