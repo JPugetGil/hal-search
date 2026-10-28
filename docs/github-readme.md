@@ -46,6 +46,7 @@ Open it in your browser: you should see your 10 most recent publications. Then a
 | `&highlight=YOUR_IDHAL` | Your name in bold in the author lists. Prefer your idHal: the list is comma-separated, so a full name only works without a comma (`First%20Last`) |
 | `&maxAuthors=5` | Authors shown before "et al." (`0` = all, default 10) |
 | `&sort=date-asc` | Oldest first (`relevance` is also available; the default is newest first) |
+| `&lang=fr` | French labels, document types, domains and numbers (see [step 5](#5-in-french)) |
 | `&title=Recent%20publications` | Header title (`%20` = space, max 80 characters) |
 | `&theme=dark` | Dark colors (`light` by default, `auto` follows the viewer's OS) |
 | `&main=%23c8102e` | Accent color (`%23` = `#`). Also `bg` (card background) and `text` |
@@ -88,7 +89,19 @@ Write a meaningful alternative text between `[!` and `]` for screen-reader users
 In HTML, `&` is written `&amp;` (a plain `&` also works on GitHub). Leave an empty line before and after the HTML block in your Markdown.
 This is the output of `buildMarkdownSnippet({ svgBase: 'https://hal-search.vercel.app', darkMode: true, … })`, and of the configurator's "Follow the GitHub light/dark theme" option.
 
-## 5. Troubleshooting
+## 5. In French
+
+Add `&lang=fr` to the image URL:
+
+```md
+[![Mes publications sur HAL](https://hal-search.vercel.app/svg?idHal=YOUR_IDHAL&rows=5&lang=fr)](https://cv.hal.science/YOUR_IDHAL)
+```
+
+The result count ("9 183 résultats"), the document types (HAL's own wording: "Article dans une revue", "Communication dans un congrès"…), the domains (from `lvl=2`), "Libre accès" and the footer are in French, and so are the error images.
+The header still reads "Publications" in both languages: change it with `&title=` (`&title=Mes%20publications`). Titles, abstracts and keywords are shown as deposited in HAL.
+Without `lang` (or with another language), the image is in English. In the configurator, pick "Français" under *Language of the labels*.
+
+## 6. Troubleshooting
 
 **My new publication doesn't show up.**
 Images are cached for 1 hour by the service, and GitHub's image proxy can keep them longer. HAL itself may need a moment to index a new deposit.
@@ -103,6 +116,8 @@ To force a refresh, change the URL, for example by adding an unused parameter su
 | *HAL did not answer in time. Please try again later.* | HAL took more than 4 seconds. Error images are only cached for 60 seconds, so it fixes itself |
 | *Could not load publications from HAL. Please try again later.* | HAL is unavailable, try again later |
 
+With `lang=fr`, the same messages are in French (*Requête manquante : …*, *HAL a refusé cette requête : …*).
+
 **The list is empty ("No results found.").** Open `https://cv.hal.science/YOUR_IDHAL`. If your CV is empty too, your publications aren't linked to your idHal yet (see step 1). Also check your filters (`docTypes`, `yearFrom`, `oa`).
 
 **Someone else's publications appear.** You probably used `search=` (free text) or a name query. Use `idHal=` or `orcid=`.
@@ -113,7 +128,7 @@ To force a refresh, change the URL, for example by adding an unused parameter su
 
 **The fonts look different from the preview.** The image uses the viewer's system fonts (an `<img>` can't load web fonts). Long titles are cut with "…" to stay inside the cards.
 
-**I want it in French.** The image service has no translation parameter. `title=` changes the header, but the other labels stay in English. For a fully translated list on your own website, use the [web component](lab-website.md#6-french-labels) instead.
+**I want it in another language.** English and French are built in (`lang=fr`, see [step 5](#5-in-french)). Other languages fall back to English, and the image service has no parameter for custom labels: `title=` only changes the header. On your own website, the [web component](lab-website.md#6-french-labels) accepts any label through its `labels` attribute.
 
 ## Other Markdown hosts
 

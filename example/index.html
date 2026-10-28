@@ -516,7 +516,7 @@
       // ── Constants ─────────────────────────────────────────────
       const SVG_BASE = 'https://hal-search.vercel.app';
       const SVG_MAX_ROWS = 20;
-      const CDN_URL = 'https://cdn.jsdelivr.net/npm/hal-search@0.5/dist/hal-search.min.js';
+      const CDN_URL = 'https://cdn.jsdelivr.net/npm/hal-search@0.6/dist/hal-search.min.js';
       const HOSTED_CONFIGURATOR = 'https://jpugetgil.github.io/hal-search/';
       /** Directory of this page: embed.html is published next to it. */
       const EMBED_BASE = new URL('./', location.href).href.replace(/\/+$/, '');
@@ -628,7 +628,8 @@
         setIfFilled(params, 'yearTo', $('year-to').value);
         if ($('oa').checked) params.set('oa', '1');
 
-        params.set('lang', $('lang').value);
+        // English is the default: only another language goes into the snippets (`lang=fr`).
+        if ($('lang').value !== 'en') params.set('lang', $('lang').value);
         params.set('output', $('output').value);
         params.set('lvl', $('lvl').value);
         setIfFilled(params, 'rows', $('rows').value);

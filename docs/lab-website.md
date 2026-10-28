@@ -8,8 +8,9 @@ Two ways to embed it:
 |---|---|---|
 | Needs | One `<script>` tag | Only an `<iframe>` |
 | Result | Interactive cards: pagination, PDF/DOI/BibTeX links, copy citation | Same cards, inside a frame with a fixed height |
-| Styling | Attributes + CSS variables (`::part`) | URL parameters (colors, theme) |
-| Translations | `labels` attribute | English only (unless you self-host `embed.html`) |
+| Styling | Attributes + CSS variables on `hal-search` | URL parameters (colors, theme) |
+| Languages | `lang="fr"`, plus any label with the `labels` attribute | English or French (`lang=fr`) |
+| Search engines | Optional structured data (`structured-data`) | None |
 
 > Build your snippet with the **[configurator](https://jpugetgil.github.io/hal-search/)** and check the preview before pasting it.
 
@@ -38,13 +39,13 @@ Publications are sorted newest first (`sort="date-desc"`). `sort="date-asc"` and
 ## 2. Embed with the web component
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/hal-search@0.5/dist/hal-search.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/hal-search@0.6/dist/hal-search.min.js" defer></script>
 
 <hal-search collection="LIRIS" group-by="year" rows="20" lvl="1"></hal-search>
 ```
 
 - Load the script once per page, for example in your site's `<head>` or footer. Then use as many `<hal-search>` elements as you like.
-- `@0.5` gets the latest 0.5.x fixes. Pin an exact version (`@0.5.0`) if you never want changes. You can also download `dist/hal-search.min.js` from npm and host it yourself.
+- `@0.6` gets the latest 0.6.x fixes. Pin an exact version (`@0.6.0`) if you never want changes. You can also download `dist/hal-search.min.js` from npm and host it yourself.
 - `lvl` sets the detail level: `0` citation only, `1` title, authors, venue and links (default), `2` adds keywords, domains, Open Access badge, BibTeX and copy citation, `3` adds the abstract.
 - `rows` sets the number of publications per page (default 10, max 50). Pagination appears below the list.
 - Visitors' browsers query the HAL API (`api.archives-ouvertes.fr`) directly. There is no hal-search server in between.
@@ -96,22 +97,23 @@ Create a shortcode `layouts/shortcodes/hal-publications.html`:
   {{- with .Get "rows" }} rows="{{ . }}"{{ end }}
   {{- with .Get "theme" }} theme="{{ . }}"{{ end }}
   {{- with .Get "main" }} main="{{ . }}"{{ end }}
+  {{- with .Get "lang" }} lang="{{ . }}"{{ end }}
 ></hal-search>
 ```
 
 Add the script once in your base template, for example in `layouts/partials/head.html` or your theme's head partial:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/hal-search@0.5/dist/hal-search.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/hal-search@0.6/dist/hal-search.min.js" defer></script>
 ```
 
-Then write `{{< hal-publications collection="LIRIS" groupBy="year" >}}` in any content page. Shortcodes output raw HTML, so you don't need to enable unsafe HTML in Goldmark.
+Then write `{{< hal-publications collection="LIRIS" groupBy="year" >}}` in any content page (`lang="fr"` for French labels). Shortcodes output raw HTML, so you don't need to enable unsafe HTML in Goldmark.
 
 ### Drupal
 
 Drupal's text formats filter HTML. With CKEditor 5, the "Limit allowed HTML tags and correct faulty HTML" filter removes `<script>` and unknown elements such as `<hal-search>`. Pick one option:
 
-- **Theme library (cleanest)**: declare the script as an external library in your theme's `*.libraries.yml` and attach it globally. Then add the element and its attributes to the format's allowed tags, for example: `<hal-search collection struct-id id-hal doc-types year-from year-to group-by lvl rows theme main bg text heading-level labels>`.
+- **Theme library (cleanest)**: declare the script as an external library in your theme's `*.libraries.yml` and attach it globally. Then add the element and its attributes to the format's allowed tags, for example: `<hal-search collection struct-id id-hal doc-types year-from year-to group-by lvl rows theme main bg text heading-level labels lang structured-data>`.
 - **Full HTML** format without the tag filter, for trusted editors only.
 - **iframe**: allow `<iframe src title width height loading style>` in the text format and paste the [iframe snippet](#3-embed-with-an-iframe).
 
@@ -128,7 +130,8 @@ When you can't add a script, embed the hosted page:
   title="Publications from HAL" width="100%" height="900" loading="lazy" style="border:0"></iframe>
 ```
 
-- The page reads the same [URL parameters](../README.md#url-parameters) as the web component (`collection`, `structId`, `docTypes`, `yearFrom`, `groupBy`, `lvl`, `rows`, `theme`, `bg`, `text`, `main`…). URLs from 0.4 (`uid=…&type=svg`) still work.
+- The page reads the same [URL parameters](../README.md#url-parameters) as the web component (`collection`, `structId`, `docTypes`, `yearFrom`, `groupBy`, `lvl`, `rows`, `theme`, `bg`, `text`, `main`, `lang`…). URLs from 0.4 (`uid=…&type=svg`) still work.
+- `&amp;lang=fr` gives French labels. Also translate the `title` attribute of the iframe for screen readers (`title="Publications sur HAL"`, which the configurator does for you).
 - Without a query parameter, it shows a short message instead of loading the whole archive.
 - An iframe doesn't resize to its content. Choose `height` for your `rows` and `lvl`, or the frame will scroll.
 - The configurator's iframe snippet uses the address where the configurator is served. `buildEmbedSnippet({ embedBase, … })` builds the same snippet in code.
@@ -149,10 +152,10 @@ Attributes cover the basics:
 - With `theme="auto"`, a light and a dark variant are derived from your colors.
 - `highlight="jdupont,mmartin"` puts these authors in bold. The list is comma-separated, so prefer idHal values, or full names written without a comma.
 
-For everything else (fonts, corners, shadows, borders), set the CSS variables through the component's `container` part. The styles live in the component's Shadow DOM, so setting the variables on `hal-search` itself has no effect:
+For everything else (fonts, corners, shadows, borders), set CSS variables on `hal-search` in your site's stylesheet:
 
 ```css
-hal-search::part(container) {
+hal-search {
   --hal-accent: #c8102e;
   --hal-accent-hover: #9e0c24;
   --hal-font: "Marianne", Arial, sans-serif;
@@ -160,9 +163,29 @@ hal-search::part(container) {
   --hal-shadow: none;
   --hal-border: #d9d9d9;
 }
+
+/* Variables apply to every theme: give the dark theme its own values */
+hal-search[data-hal-theme="dark"] {
+  --hal-accent: #ff6b81;
+}
+@media (prefers-color-scheme: dark) {
+  hal-search[data-hal-theme="auto"] { --hal-accent: #ff6b81; }
+}
+
+/* Layout: the exposed container part */
+hal-search::part(container) {
+  max-width: 48rem;
+  margin-inline: auto;
+}
 ```
 
-Rules set with `::part(container)` take precedence over the `bg`, `text` and `main` attributes.
+When several settings give the same color, the strongest wins:
+
+1. the `bg`, `text` and `main` attributes;
+2. the variables you set on `hal-search`;
+3. the defaults of the theme (`theme="light"`, `"dark"` or `"auto"`).
+
+So the same stylesheet can serve every list, and one list can still get its own `main` color. Keep variables out of `::part(container)`: there they override even the attributes.
 Group headings, the loading text and the credit link use your page's text color, so they stay readable on any background.
 The full list of variables, with their light and dark defaults, is in the [README](../README.md#css-custom-properties-html-output).
 With the iframe, only the URL parameters (`main`, `bg`, `text`, `theme`) apply. Your site's CSS can't reach inside the frame.
@@ -186,59 +209,91 @@ The element dispatches `hal-results` (`event.detail.response`) and `hal-error` (
 
 ## 6. French labels
 
-Every visible string can be replaced with the `labels` attribute, a JSON object. Write it between single quotes, and use the typographic apostrophe `’` inside the text:
+Add `lang="fr"`:
 
 ```html
-<html lang="fr">
-…
-<hal-search collection="LIRIS" group-by="year" labels='{
-  "loading": "Chargement…",
-  "empty": "Aucune publication trouvée.",
-  "error": "Erreur : {message}",
-  "previous": "Précédent",
-  "next": "Suivant",
-  "pageInfo": "Page {page} sur {pages}",
+<hal-search collection="LIRIS" group-by="year" lang="fr"></hal-search>
+```
+
+Everything the widget writes is then in French: buttons and pagination ("Précédent", "Suivant", "Copier la citation"), the result count ("9 183 résultats"), "Libre accès", the document types in HAL's own wording ("Article dans une revue", "Communication dans un congrès", "Chapitre d’ouvrage"…), and the scientific domains (HAL's French labels, from `lvl="2"`). Titles, abstracts and keywords are shown as deposited in HAL.
+
+- `lang` is the standard HTML attribute: `fr-FR` or `fr-CA` work too. Other languages (`lang="de"`) fall back to English labels.
+- The widget also marks its content as French for screen readers.
+- The iframe takes `&amp;lang=fr` ([section 3](#3-embed-with-an-iframe)).
+
+To change some strings, add the `labels` attribute, a JSON object written between single quotes. It applies on top of the language you chose. Use the typographic apostrophe `’` inside the text:
+
+```html
+<hal-search collection="LIRIS" lang="fr" labels='{
+  "empty": "Aucune publication pour le moment.",
   "resultCount": "{count} publications",
   "resultCountOne": "{count} publication",
-  "pagination": "Pages de résultats",
-  "openAccess": "Accès ouvert",
-  "abstract": "Résumé",
-  "showMore": "Afficher plus",
-  "showLess": "Afficher moins",
-  "untitled": "Sans titre",
-  "copyCitation": "Copier la citation",
-  "copied": "Copié !",
-  "opensInNewTab": "(nouvel onglet)",
-  "undated": "Sans date",
-  "docTypes": {
-    "ART": "Article dans une revue",
-    "COMM": "Communication dans un congrès",
-    "COUV": "Chapitre d’ouvrage",
-    "OUV": "Ouvrage",
-    "THESE": "Thèse",
-    "HDR": "HDR",
-    "POSTER": "Poster",
-    "REPORT": "Rapport",
-    "SOFTWARE": "Logiciel",
-    "UNDEFINED": "Prépublication"
-  }
+  "docTypes": { "UNDEFINED": "Prépublication", "COMM": "Communication" }
 }'></hal-search>
 ```
 
-- Keys you leave out stay in English. `docTypes` is merged code by code. Invalid JSON is ignored, and the list then shows in English.
-- `{count}`, `{page}`, `{pages}` and `{message}` are placeholders.
-- With `lang="fr"` on the page (or on a parent element), counts are formatted the French way (`1 234`).
+- Keys you leave out keep the built-in text. `docTypes` is merged code by code. Invalid JSON is ignored.
+- `{count}`, `{page}`, `{pages}` and `{message}` are placeholders. `{count}` is already formatted (`1 234`).
+- For another language, write every key in `labels` (the list is `Labels` in [src/types.ts](../src/types.ts)), or [contribute the language](../README.md#contributing): it is one file.
 - Year groups (`group-by="year"`) need no translation. Document-type groups use the `docTypes` labels.
 
-The same object works as the `labels` option of the JavaScript `HalSearch` class. See the [README](../README.md#labels-and-translation).
+The same object works as the `labels` option of the JavaScript `HalSearch` class, together with `locale: 'fr'`. See the [README](../README.md#language).
 
-## 7. Troubleshooting
+## 7. Help search engines (structured data)
+
+Add `structured-data` to describe the list to search engines with schema.org JSON-LD:
+
+```html
+<hal-search collection="LIRIS" group-by="year" structured-data></hal-search>
+```
+
+The element then adds a `<script type="application/ld+json">` next to itself (in the page, where crawlers read it): an `ItemList` of `ScholarlyArticle` (`Thesis`, `Book` and `Chapter` for those HAL types), with titles, authors, years, HAL links and DOIs. It describes the page of results on screen and is updated when visitors change page.
+
+- Only search engines that run JavaScript (Google does) see it, since the list is built in the visitor's browser.
+- On a page with several lists, add it to the main one only.
+- `structured-data="false"` turns it off. It's off by default.
+
+## 8. Sites with a Content Security Policy
+
+`<hal-search>` works under a strict CSP, without `style-src 'unsafe-inline'`. Allow:
+
+```
+script-src  'self' https://cdn.jsdelivr.net
+connect-src 'self' https://api.archives-ouvertes.fr
+```
+
+- If you host `hal-search.min.js` yourself, `script-src 'self'` is enough.
+- Visitors' browsers call the HAL API directly, hence `connect-src`.
+- The styles are constructable stylesheets, which a CSP doesn't block. Only very old browsers (Safari before 16.4) fall back to a `<style>` element, which a strict CSP blocks.
+- Structured data is not affected: JSON-LD is data, never executed.
+- `output="svg"` works under a strict CSP too.
+- If your CSP enforces Trusted Types and lists the allowed policies (`trusted-types …`), add `hal-search` to the list. The default HTML cards need no policy.
+- iframe: add `frame-src https://jpugetgil.github.io` (or the host of your `embed.html`). The snippet's `style="border:0"` is then ignored, so the frame keeps its border; remove it from your stylesheet if you like.
+- SVG images from the image service: add `img-src https://hal-search.vercel.app`.
+
+The README lists the details, including the `HalSearch` class and inline SVG output: [Content Security Policy](../README.md#content-security-policy).
+
+## 9. React and Vue
+
+The web component works in both, with no wrapper package. In React 19:
+
+```jsx
+<hal-search collection="LIRIS" lvl={2} oa structured-data class="pubs"
+  onhal-results={(e) => setCount(e.detail.response.response.numFound)} />
+```
+
+React 18 needs `class`, string values and a ref for the events. Vue needs `isCustomElement`. Both are in the README: [React and Vue](../README.md#react-and-vue).
+
+## 10. Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
-| Nothing appears | The element needs a query attribute (`collection`, `struct-id`, `id-hal`, `orcid`, `search` or `q`). Check the page source: your CMS may have removed the `<script>` or the element. Check the browser console |
+| *No search criterion given.* (*Aucun critère de recherche indiqué.*) | The element needs a query attribute (`collection`, `struct-id`, `id-hal`, `orcid`, `search` or `q`) with a valid value. Check the attribute name and value |
+| Nothing appears at all | Check the page source: your CMS may have removed the `<script>` or the element. Check the browser console |
 | *Error: HAL API returned an unexpected response. Is "XYZ" a valid HAL collection code?* | Wrong collection code. Check `https://hal.science/XYZ` |
 | Some publications are missing | A collection lists what your HAL administrators put in it, and a structure lists the publications affiliated with it in HAL. Fix the affiliation or the collection in HAL itself |
-| The list never loads on a site with a Content Security Policy | Allow `script-src https://cdn.jsdelivr.net` (or host the file yourself), `connect-src https://api.archives-ouvertes.fr`, and `style-src 'unsafe-inline'` (the component injects its stylesheet in a `<style>` element) |
+| The list never loads on a site with a Content Security Policy | Allow the script host and the HAL API, see [section 8](#8-sites-with-a-content-security-policy) |
+| Still in English with `lang="fr"` | The script is an older version: load `hal-search@0.6` |
+| My CSS variables are ignored | Set them on `hal-search` itself: selectors such as `.hal-search` or `.hal-article` can't reach inside the component. A `bg`, `text` or `main` attribute on the element also wins over them |
 | Colors ignored | Invalid color value, or `#` not encoded as `%23` in an iframe URL |
 | Headings out of order for accessibility checkers | Set `heading-level` to one level below the heading that introduces the list |

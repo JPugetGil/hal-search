@@ -3,6 +3,46 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/) (0.x: minor versions may break).
 
+## [0.6.0] - 2026-10-28
+
+French, strict Content Security Policies, structured data, and a lighter package.
+Upgrading: see [docs/migration-0.6.md](docs/migration-0.6.md). The URL scheme is unchanged, apart from the new `lang` parameter.
+
+### Added
+
+- French locale: `locale` option (`'en'` default, `'fr'`; `'fr-FR'` → `'fr'`; other languages fall back to English), `lang` URL parameter (embed page, SVG service: `https://hal-search.vercel.app/svg?idHal=…&lang=fr`) and the standard `lang` attribute on `<hal-search>`. French labels, HAL's own French document types, French domain labels (`fr_domainAllCodeLabel_fs`, from `lvl=2`), locale number formatting (`9 183 résultats`) and plural rules. `labels` overrides apply on top of the locale. `HalSearch` sets `lang` on its container (restored by `destroy()`), `renderSvg` on the SVG root.
+- SVG service: French error images with `lang=fr`. The landing page lists the parameter.
+- Snippet builders and `toUrlParams`: an explicit `locale` adds `lang` to the URLs and attributes (`en` included), and translates the default alt text / iframe title ("Publications sur HAL").
+- Exports `DEFAULT_LOCALE`, `LOCALES`, `resolveLocale()`. `resolveLabels(overrides, locale?)`, `resolveFields(lvl, locale?)`, and a `locale` parameter for `fetchArticles`, `buildHalUrl` and `fetchSvg`.
+- `structuredData` option / `structured-data` attribute (opt-in): schema.org JSON-LD (`ItemList` of `ScholarlyArticle`, `Thesis`, `Book`, `Chapter`) describing the displayed page, in the light DOM. Replaced on each render, removed while loading, on errors, empty results and `destroy()`. A data block, so a CSP doesn't block it.
+- `hal-search/svg` subpath: the DOM-free part of the API (everything except `HalSearch`, `defineHalSearchElement`, `DEFAULT_CSS` and `injectDefaultStyles`) for Node, edge runtimes and SSR, as ES module and CommonJS (about 42 kB instead of 82 kB). Its types compile without the DOM lib (so it doesn't export `HalSearchOptions`), and resolve under `moduleResolution: node10` too (`typesVersions`). The SVG service uses it.
+- `<hal-search>` theming with page variables: `hal-search { --hal-accent: … }` now works. Precedence: `bg` / `text` / `main` attributes > variables set on the element > theme defaults. The element mirrors its theme in `data-hal-theme`.
+- `Labels.missingQuery` ("No search criterion given." / "Aucun critère de recherche indiqué.") and the `hal-empty--missing-query` class.
+- React and Vue usage of `<hal-search>` in the README (no wrapper package).
+- SVG root markers for monitoring: `data-hal-count` (total, a plain integer) on `renderSvg` output, `data-hal-error="true"` on error images (`renderErrorSvg` and the SVG service's fallback image).
+- Monitoring of the public SVG service: `.github/workflows/health.yml` checks it every 6 hours (status, content type, error images, empty lists for a known author, `cdg1` function region, response time). A failing scheduled run emails the maintainer.
+
+### Changed
+
+- `HalSearch.search()` with a query that has no criterion (`{}`, `{ idHal: '' }`, `{ text: '***' }`, `''`) no longer requests the whole archive (`q=*:*`, millions of documents). It sends nothing, shows `labels.missingQuery`, resolves `undefined` and calls neither `onResults` nor `onError`. A raw `'*:*'` is still sent.
+- `<hal-search>` without a query criterion shows `labels.missingQuery` (in its `lang`) instead of staying empty. It still sends no request.
+- **Breaking for full `Labels` objects**: `missingQuery` is a new required key. `Partial<Labels>` overrides are not affected.
+- HTML result counts are formatted in the language of the labels (English by default), no longer in the language of the closest `lang` attribute: `<html lang="fr">` with English labels gave "1 234 results".
+- Strict Content Security Policy (no `style-src 'unsafe-inline'`): `<hal-search>` styles itself with constructable stylesheets instead of `<style>` elements. `HalSearch` still inserts `<style id="hal-search-styles">` first in `<head>`, and adopts the same stylesheet when a CSP blocks it. Inline styles are written through the CSSOM. The inline SVG output (`output: 'svg'`) gets its colors from an attached stylesheet instead of a `<style>` inside the SVG (`renderSvg()` and `fetchSvg()` still embed it).
+- Trusted Types (`require-trusted-types-for 'script'`): the inline SVG markup and the JSON-LD go through a policy named `hal-search`. A page that restricts policy names must allow it (`trusted-types hal-search`); otherwise inline SVG output fails with an explanatory error (`onError`), and HTML output is unaffected.
+- `<hal-search>` declares its theme defaults on `:host`. Variables set through `::part(container)` still override everything; the README now recommends `::part(container)` for layout only.
+- The ES bundle is minified (whitespace included, `/* @__PURE__ */` annotations kept), and bundlers can drop the HTML widget, its stylesheet and the web component from apps that only import `renderSvg`, `fetchSvg` or `buildHalUrl`.
+- Source maps are no longer published: the npm tarball is about 200 kB instead of 448 kB, with the new `hal-search/svg` files and CommonJS declarations included. The bundles carry no `sourceMappingURL`.
+- Build: type declarations are emitted by `tsc` (`npm run build:types`) instead of `vite-plugin-dts`, with TypeScript 7. `npm run typecheck` also checks the `hal-search/svg` entry without the DOM lib.
+- The configurator has a language selector, and its snippets load `hal-search@0.6`. The dev sandbox (`npm run dev`) has language and JSON-LD switches.
+
+### Fixed
+
+- The Dependabot update to TypeScript 7 broke `npm run build`: `vite-plugin-dts` needs the JavaScript compiler API that TypeScript 7 no longer ships. Declarations are now emitted by `tsc` itself.
+- The type declarations didn't resolve under `moduleResolution: node16` / `nodenext`: the whole package was silently typed `any` (or failed without `skipLibCheck`). Relative imports in `dist/*.d.ts` now carry `.js`.
+- TypeScript CommonJS consumers (`import x = require('hal-search')` in a `.cts` file) got ES module declarations (TS1471). The `require` conditions now have their own `.d.cts` declarations.
+- Legacy `uid` URLs from 0.4 (`uid=Jane Doe`): plain text is searched as an exact phrase again, as in 0.4. 0.5 passed it unquoted, which matched the words in any order. Field queries (`uid=authIdHal_s:x`) stay raw.
+
 ## [0.5.0] - 2026-10-28
 
 A rewrite focused on two audiences: researchers (GitHub README, personal page) and lab webmasters (collections, CMS).
@@ -101,6 +141,7 @@ Upgrading: see [docs/migration-0.5.md](docs/migration-0.5.md).
 - SSR application (Vite + Express) rendering HTML or SVG.
 - Interactive example deployed to GitHub Pages, npm publish workflow.
 
+[0.6.0]: https://github.com/JPugetGil/hal-search/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/JPugetGil/hal-search/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/JPugetGil/hal-search/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/JPugetGil/hal-search/compare/v0.2.0...v0.3.0

@@ -2,6 +2,8 @@
 
 0.5 is a rewrite. The JavaScript API has breaking changes and no deprecated aliases. The **public URLs keep working**: `uid` and `type` are still read by the embed page and the SVG service.
 
+> Going to 0.6 afterwards? See [Migrating from 0.5 to 0.6](migration-0.6.md).
+
 Quick checklist:
 
 - [ ] `search({ uid })` → `search({ query })` ([1](#1-uid-becomes-a-structured-query))
@@ -171,7 +173,7 @@ buildEmbedSnippet({ embedBase, query: { idHal: 'jpugetgil' }, lvl: 2, rows: 5, o
 - New: `filters`, `sort`, `theme`, `groupBy`, `highlightAuthors`, `maxAuthors`, `showCredit`, `title`, `iframeTitle`.
 - The snippet now escapes every attribute and adds `title` (accessibility), `loading="lazy"` and `style="border:0"`.
 
-`embed.html` still accepts `?uid=…&type=svg`. `uid` is now a raw Solr query and is **no longer wrapped in quotes**, so `uid=authIdHal_s:jdupont` finally works.
+`embed.html` still accepts `?uid=…&type=svg`. A field query in `uid` is **no longer wrapped in quotes**, so `uid=authIdHal_s:jdupont` finally works. (Plain text such as `uid=Jane Doe` was passed unquoted in 0.5.0; since 0.6 it is quoted again, as in 0.4, see [migration-0.6.md](migration-0.6.md#4-legacy-uid-plain-text-is-a-phrase-again).)
 Prefer the new parameters (`idHal=jdupont&output=svg`). Without any query parameter, the page shows a short message instead of loading the whole archive (`*:*`).
 
 New builders: `buildSvgUrl`, `buildMarkdownSnippet`, `buildWebComponentSnippet`.
