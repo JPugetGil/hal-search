@@ -81,7 +81,7 @@ vi.mock('../src/levels', () => ({
     labels?.length ? labels.map((l) => l.split('_FacetSep_')[1].split('/').pop()) : domains,
 }));
 
-import { renderError, renderLoading, renderResults } from '../src/renderer';
+import { renderError, renderLoading, renderMissingQuery, renderResults } from '../src/renderer';
 import type { HtmlRenderContext } from '../src/renderer';
 
 // ---------------------------------------------------------------------------
@@ -114,6 +114,7 @@ const LABELS: Labels = {
   title: 'Publications',
   opensInNewTab: '(opens in a new tab)',
   undated: 'Undated',
+  missingQuery: 'No search criterion given.',
   docTypes: { ART: 'Journal article', COMM: 'Conference paper' },
 };
 
@@ -648,6 +649,17 @@ describe('states and accessibility', () => {
     expect(container.hasAttribute('aria-busy')).toBe(false);
     expect($('.hal-error')?.textContent).toBe('Error: HAL API error: 503');
     expect($('.hal-live')?.textContent).toBe('Error: HAL API error: 503');
+  });
+
+  it('missing query: labels.missingQuery as an empty state, announced, aria-busy cleared', () => {
+    renderResults(container, [RICH], makeCtx());
+    renderLoading(container, LABELS);
+    renderMissingQuery(container, LABELS);
+    expect(container.hasAttribute('aria-busy')).toBe(false);
+    expect($('.hal-empty.hal-empty--missing-query')?.textContent).toBe('No search criterion given.');
+    expect($('.hal-live')?.textContent).toBe('No search criterion given.');
+    expect($('.hal-article')).toBeNull();
+    expect($('.hal-spinner')).toBeNull();
   });
 
   it('empty state uses labels.empty', () => {

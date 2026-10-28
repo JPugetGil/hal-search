@@ -1,0 +1,27 @@
+name: Health
+
+# Checks the public SVG service (https://hal-search.vercel.app) every 6 hours: status, content type,
+# error images, empty lists for a query known to match publications, function region (cdg1) and response
+# time. See .github/scripts/health-check.mjs.
+# GitHub emails a failed scheduled run to the maintainer (Settings > Notifications > Actions).
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  svg-service:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Check the SVG service
+        run: node .github/scripts/health-check.mjs

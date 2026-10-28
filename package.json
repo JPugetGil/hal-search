@@ -1,6 +1,6 @@
 {
   "name": "hal-search",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Display publications from the HAL open archive on any website or GitHub README: HTML cards, web component or SVG.",
   "keywords": [
     "hal",
@@ -28,11 +28,33 @@
   "main": "./dist/hal-search.cjs",
   "module": "./dist/hal-search.es.js",
   "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "svg": [
+        "./dist/svg-entry.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/hal-search.es.js",
-      "require": "./dist/hal-search.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/hal-search.es.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/hal-search.cjs"
+      }
+    },
+    "./svg": {
+      "import": {
+        "types": "./dist/svg-entry.d.ts",
+        "default": "./dist/hal-search-svg.es.js"
+      },
+      "require": {
+        "types": "./dist/svg-entry.d.cts",
+        "default": "./dist/hal-search-svg.cjs"
+      }
     },
     "./dist/hal-search.min.js": "./dist/hal-search.min.js",
     "./package.json": "./package.json"
@@ -40,7 +62,8 @@
   "unpkg": "./dist/hal-search.min.js",
   "jsdelivr": "./dist/hal-search.min.js",
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.map"
   ],
   "sideEffects": [
     "./dist/hal-search.min.js"
@@ -50,9 +73,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --config vite.config.cdn.ts",
+    "build": "vite build && vite build --config vite.config.svg.ts && vite build --config vite.config.cdn.ts && npm run build:types",
+    "build:types": "tsc -p tsconfig.build.json && node scripts/dts-extensions.mjs",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.svg-entry.json",
     "typecheck:test": "tsc -p tsconfig.test.json",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -61,9 +85,8 @@
   },
   "devDependencies": {
     "happy-dom": "^21.0.4",
-    "typescript": "^5.4.0",
+    "typescript": "^7.0.2",
     "vite": "^8.0.0",
-    "vite-plugin-dts": "^4.5.4",
     "vitest": "^5.0.5"
   }
 }

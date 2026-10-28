@@ -1,11 +1,12 @@
 import type {
   ColorOptions,
   DetailLevel,
+  DisplayOptions,
   GroupBy,
   HalApiResponse,
+  HalDoc,
   HalFilters,
   HalQueryInput,
-  HalSearchOptions,
   Labels,
   OutputFormat,
   PaginationState,
@@ -15,16 +16,71 @@ import type {
 } from './types';
 import type { Palette } from './theme';
 import { fetchArticles } from './api';
-import { buildHalWebUrl } from './query';
+import { buildHalWebUrl, buildSolrQuery, hasQueryCriterion } from './query';
 import { resolveLabels } from './labels';
+import { resolveLocale } from './locales';
 import { isSafeColor, paletteToCssVars, resolvePalette } from './theme';
-import { renderError, renderLoading, renderResults } from './renderer';
-import { renderSvg } from './svg';
-import { injectDefaultStyles } from './styles';
+import { renderError, renderLoading, renderMissingQuery, renderResults } from './renderer';
+import { renderSvgParts } from './svg';
+import { buildStructuredData, createStructuredDataScript, STRUCTURED_DATA_ATTRIBUTE } from './structured-data';
+import { attachStyleSheet, injectDefaultStyles } from './styles';
+import type { AttachedStyleSheet } from './styles';
+import { TRUSTED_TYPES_POLICY, trustedHtml } from './trusted-types';
 
 // ---------------------------------------------------------------------------
 // Types and defaults
 // ---------------------------------------------------------------------------
+
+/**
+ * Options passed to the HalSearch constructor.
+ * Defined here rather than in types.ts: it names DOM types, which the DOM-free `hal-search/svg` entry
+ * (and its declarations) must not depend on.
+ */
+export interface HalSearchOptions extends DisplayOptions {
+  /** DOM element or CSS selector for the render target */
+  container: HTMLElement | string;
+  /** HAL API base URL — override for proxies/testing. Default: HAL production */
+  apiBase?: string;
+  /** Number of results per page. Default: 10 */
+  rows?: number;
+  /** Default: 'date-desc' */
+  sort?: SortOrder;
+  /** Default filters, merged under the filters given to search() */
+  filters?: HalFilters;
+  /**
+   * Render the article list as HTML cards or as an inline SVG. Default: 'html'
+   *
+   * The inline SVG works under a strict Content-Security-Policy (`style-src` without 'unsafe-inline'): its
+   * colors are a constructable stylesheet attached to `styleRoot`, not a `<style>` inside the SVG (that
+   * fallback is only used by browsers without constructable stylesheets). Under Trusted Types
+   * (`require-trusted-types-for 'script'`) the markup is inserted through a policy named `hal-search`: a page
+   * that restricts policy names must allow it (`trusted-types hal-search`), else the container shows an error
+   * and `onError` is called; HTML output needs no policy.
+   */
+  output?: OutputFormat;
+  /** Inject default CSS. Default: true (the colors of the inline SVG are attached in any case) */
+  injectStyles?: boolean;
+  /**
+   * Where the stylesheets go: the default CSS and the per-instance ones (the 'auto' color overrides, the
+   * colors of the inline SVG). Default: the container's shadow root when it lives in one, else the document
+   * (`<head>`). The web component passes its ShadowRoot.
+   */
+  styleRoot?: Document | ShadowRoot;
+  /** Heading level of article titles in HTML output. Default: 3 */
+  headingLevel?: 2 | 3 | 4 | 5 | 6;
+  /** SVG header title (output 'svg'). Default: labels.title */
+  title?: string;
+  /**
+   * Describe the displayed page for search engines: a `<script type="application/ld+json">` (schema.org
+   * `ItemList` of `ScholarlyArticle`) in the light DOM, next to the results (in the container, or as a child
+   * of the shadow host when the container lives in a shadow root), replaced on each render. Default: false
+   */
+  structuredData?: boolean;
+  /** Called after each successful fetch. Exceptions thrown here never replace the rendered results. */
+  onResults?: (response: HalApiResponse) => void;
+  /** Called on fetch error (aborted requests are not errors) */
+  onError?: (err: Error) => void;
+}
 
 /** Read-only snapshot of a HalSearch instance, see `HalSearch.state`. */
 export interface HalSearchState {
@@ -64,8 +120,11 @@ const OVERRIDE_TARGETS: Record<(typeof COLOR_KEYS)[number], (keyof Palette)[]> =
   mainColor: ['accent', 'accentHover', 'accentText'],
 };
 
-/** Attribute naming the `<style>` that holds the 'auto' color overrides of an instance. */
+/** Attribute naming the fallback `<style>` that holds the 'auto' color overrides of an instance. */
 const COLORS_STYLE_ATTRIBUTE = 'data-hal-search-colors';
+
+/** Attribute naming the fallback `<style>` that holds the stylesheet of an instance's inline SVG. */
+const SVG_STYLE_ATTRIBUTE = 'data-hal-search-svg';
 
 /** Instances created by this copy of the library (the scope id also has a random part: several copies may share a page). */
 let instanceCount = 0;
@@ -85,6 +144,10 @@ export class HalSearch {
   private readonly output: OutputFormat;
   private readonly labels: Labels;
   private readonly labelOverrides?: Partial<Labels>;
+  /** Built-in locale when the `locale` option is given (unknown → 'en'); undefined: page language */
+  private readonly locale?: string;
+  /** `lang` attribute of the container before this instance set it (restored by destroy()) */
+  private readonly previousLang: string | null;
   private readonly apiBase?: string;
   private readonly defaultFilters: HalFilters;
   private readonly defaultSort: SortOrder;
@@ -94,6 +157,7 @@ export class HalSearch {
   private readonly highlightAuthors: string[];
   private readonly showCredit: boolean;
   private readonly title?: string;
+  private readonly structuredData: boolean;
   private readonly onResults?: (response: HalApiResponse) => void;
   private readonly onError?: (err: Error) => void;
   private readonly addedClass: boolean;
@@ -120,8 +184,12 @@ export class HalSearch {
   private destroyed = false;
   /** Inline custom properties set for the 'light' and 'dark' themes */
   private appliedVars: string[] = [];
-  /** Scoped `<style>` of the color overrides for the 'auto' theme (light and dark sets) */
-  private colorsStyle: HTMLStyleElement | undefined;
+  /** Scoped stylesheet of the color overrides for the 'auto' theme (light and dark sets) */
+  private colorsSheet: AttachedStyleSheet | undefined;
+  /** Stylesheet of the inline SVG (output 'svg'), replaced on each render */
+  private svgSheet: AttachedStyleSheet | undefined;
+  /** JSON-LD of the displayed documents (structuredData option) */
+  private structuredDataScript: HTMLScriptElement | undefined;
 
   constructor(options: HalSearchOptions) {
     if (!options || !options.container) {
@@ -130,7 +198,8 @@ export class HalSearch {
     this.container = resolveContainer(options.container);
     this.output = options.output === 'svg' ? 'svg' : HAL_SEARCH_DEFAULTS.output;
     this.labelOverrides = options.labels;
-    this.labels = resolveLabels(options.labels);
+    this.locale = typeof options.locale === 'string' && options.locale.trim() ? resolveLocale(options.locale) : undefined;
+    this.labels = resolveLabels(options.labels, this.locale);
     this.apiBase = options.apiBase;
     this.defaultFilters = mergeFilters({}, options.filters);
     this.defaultSort = options.sort ?? HAL_SEARCH_DEFAULTS.sort;
@@ -140,6 +209,7 @@ export class HalSearch {
     this.highlightAuthors = options.highlightAuthors ? [...options.highlightAuthors] : [];
     this.showCredit = options.showCredit ?? true;
     this.title = options.title;
+    this.structuredData = options.structuredData === true;
     this.onResults = options.onResults;
     this.onError = options.onError;
 
@@ -156,6 +226,9 @@ export class HalSearch {
 
     this.addedClass = !this.container.classList.contains('hal-search');
     this.container.classList.add('hal-search');
+    // Screen readers pronounce the labels in their language (titles keep their own `lang`).
+    this.previousLang = this.container.getAttribute('lang');
+    if (this.locale) this.container.setAttribute('lang', this.locale);
     this._applyAppearance();
 
     if (options.injectStyles !== false) {
@@ -184,11 +257,20 @@ export class HalSearch {
    * Starts a new search with a single request.
    * `filters` are merged over the default filters and `sort` falls back to the default sort;
    * `lvl` and `rows`, when given, are kept for the following requests (like setLevel()).
-   * Resolves with the response, or `undefined` when the request failed, was superseded or aborted.
+   *
+   * A query without any criterion (`{}`, `{ idHal: '' }`, `{ text: '***' }`, `''`: see `hasQueryCriterion`)
+   * would list the whole HAL archive, so no request is sent: any request in flight is aborted, the container
+   * shows `labels.missingQuery`, neither `onResults` nor `onError` is called and the promise resolves
+   * `undefined` (the same applies to the page and level methods). A raw Solr string such as `'*:*'` is
+   * explicit and is sent.
+   *
+   * Resolves with the response, or `undefined` when the request failed, was superseded or aborted,
+   * or when the query has no criterion.
    */
   search(params: SearchParams): Promise<HalApiResponse | undefined> {
     if (this.destroyed) return Promise.resolve(undefined);
-    this.query = params.query;
+    // `?? {}`: a JS caller omitting the query gets the "no criterion" state, not a silent no-op.
+    this.query = params.query ?? {};
     this.filters = mergeFilters(this.defaultFilters, params.filters);
     this.sort = params.sort ?? this.defaultSort;
     if (params.lvl !== undefined) this.lvl = params.lvl;
@@ -252,12 +334,19 @@ export class HalSearch {
     this.controller?.abort();
     this.controller = undefined;
     this.displayed = undefined;
+    this._setStructuredData();
     this.container.textContent = '';
     this.container.removeAttribute('aria-busy');
     for (const name of this.appliedVars) this.container.style.removeProperty(name);
     this.appliedVars = [];
     this._setColorsStyle({}, {});
+    this.svgSheet?.remove();
+    this.svgSheet = undefined;
     this.container.removeAttribute('data-hal-theme');
+    if (this.locale) {
+      if (this.previousLang === null) this.container.removeAttribute('lang');
+      else this.container.setAttribute('lang', this.previousLang);
+    }
     if (this.addedClass) this.container.classList.remove('hal-search');
     if (this.container.classList.length === 0) this.container.removeAttribute('class');
   }
@@ -286,13 +375,22 @@ export class HalSearch {
 
     // Supersede the previous request: abort it and invalidate its token.
     this.controller?.abort();
+    this.controller = undefined;
+    const token = ++this.token;
+    this.displayed = undefined;
+    this._setStructuredData();
+
+    // Same rule as the element and the SSR: never request the whole archive (q=*:*) by accident.
+    if (isMissingQuery(query)) {
+      this.pagination = { currentPage: 1, totalFound: 0, rows: this.rows, start: 0 };
+      renderMissingQuery(this.container, this.labels);
+      return undefined;
+    }
+
     const controller = new AbortController();
     this.controller = controller;
-    const token = ++this.token;
-
     const start = (page - 1) * this.rows;
     this.pagination = { currentPage: page, totalFound: this.pagination.totalFound, rows: this.rows, start };
-    this.displayed = undefined;
     renderLoading(this.container, this.labels);
 
     let response: HalApiResponse;
@@ -306,6 +404,7 @@ export class HalSearch {
         rows: this.rows,
         start,
         apiBase: this.apiBase,
+        locale: this.locale,
         signal: controller.signal,
       });
       if (token !== this.token) return undefined;
@@ -347,13 +446,13 @@ export class HalSearch {
     const docs = response.response?.docs ?? [];
 
     if (this.output === 'svg') {
-      // renderSvg returns trusted markup: every dynamic value is XML-escaped by the renderer.
-      this.container.innerHTML = renderSvg(docs, {
+      const { markup, css } = renderSvgParts(docs, {
         lvl: this.lvl,
         theme: this.theme,
         groupBy: this.groupBy,
         highlightAuthors: this.highlightAuthors,
         maxAuthors: this.maxAuthors,
+        locale: this.locale,
         labels: this.labelOverrides,
         showCredit: this.showCredit,
         ...this.colors,
@@ -362,28 +461,70 @@ export class HalSearch {
         // Same filters as the count shown next to the link.
         halUrl: buildHalWebUrl(this.query, this.filters),
       });
+      try {
+        // Trusted markup: every dynamic value is XML-escaped by the renderer (TrustedHTML under Trusted Types).
+        this.container.innerHTML = trustedHtml(this.container.ownerDocument?.defaultView, markup);
+      } catch (err) {
+        // Trusted Types enforced and the hal-search policy refused: innerHTML only takes TrustedHTML.
+        // _request shows the error and calls onError (instead of onResults).
+        if ((err as Error | undefined)?.name !== 'TypeError') throw err;
+        throw new Error(
+          `HalSearch: this page enforces Trusted Types and does not allow the "${TRUSTED_TYPES_POLICY}" policy ` +
+            `that inserts the inline SVG: add it to the trusted-types directive, or use output 'html'.`,
+        );
+      }
+      // The colors: a stylesheet object (allowed by a strict CSP, unlike a <style> in the SVG), see attachStyleSheet.
+      if (this.svgSheet) this.svgSheet.update(css);
+      else this.svgSheet = attachStyleSheet(this.styleRoot, css, { [SVG_STYLE_ATTRIBUTE]: this.instanceId });
       // Set by renderLoading (renderResults and renderError clear it themselves).
       this.container.removeAttribute('aria-busy');
-      return;
+    } else {
+      renderResults(this.container, docs, {
+        lvl: this.lvl,
+        labels: this.labels,
+        pagination: this.pagination,
+        headingLevel: this.headingLevel,
+        groupBy: this.groupBy,
+        maxAuthors: this.maxAuthors,
+        highlightAuthors: this.highlightAuthors,
+        showCredit: this.showCredit,
+        locale: this.locale,
+        onPageChange: (target: number) => {
+          void this._goTo(target, true);
+        },
+        focusResults,
+      });
     }
-
-    renderResults(this.container, docs, {
-      lvl: this.lvl,
-      labels: this.labels,
-      pagination: this.pagination,
-      headingLevel: this.headingLevel,
-      groupBy: this.groupBy,
-      maxAuthors: this.maxAuthors,
-      highlightAuthors: this.highlightAuthors,
-      showCredit: this.showCredit,
-      onPageChange: (target: number) => {
-        void this._goTo(target, true);
-      },
-      focusResults,
-    });
+    this._setStructuredData(docs);
   }
 
-  /** SVG colors are baked into the markup: re-render from the last response, without fetching. */
+  /**
+   * Replaces the JSON-LD description of the displayed documents (structuredData option), or removes it
+   * (no documents given). It goes to the light DOM, where crawlers read it: the container, or the shadow
+   * host when the container lives in a shadow root (the `<hal-search>` element).
+   */
+  private _setStructuredData(docs?: HalDoc[]): void {
+    this.structuredDataScript?.remove();
+    this.structuredDataScript = undefined;
+    if (!this.structuredData || !docs || docs.length === 0) return;
+
+    const root = typeof this.container.getRootNode === 'function' ? this.container.getRootNode() : undefined;
+    const target = typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot ? root.host : this.container;
+    const script = createStructuredDataScript(
+      target.ownerDocument ?? document,
+      buildStructuredData(docs, {
+        labels: this.labels,
+        start: this.pagination.start,
+        totalFound: this.pagination.totalFound,
+        maxAuthors: this.maxAuthors,
+      }),
+    );
+    script.setAttribute(STRUCTURED_DATA_ATTRIBUTE, this.instanceId);
+    target.appendChild(script);
+    this.structuredDataScript = script;
+  }
+
+  /** SVG colors are baked into its stylesheet and scope class: re-render from the last response, without fetching. */
   private _rerenderSvg(): void {
     if (this.output === 'svg' && this.displayed) this._render(false);
   }
@@ -437,14 +578,15 @@ export class HalSearch {
   }
 
   /**
-   * Creates, updates or removes (both sets empty) the `<style>` of the 'auto' color overrides, in the style root.
+   * Creates, updates or removes (both sets empty) the stylesheet of the 'auto' color overrides, in the style root
+   * (constructable when supported, so a strict CSP allows it; else `<style data-hal-search-colors>`).
    * Its selector matches this container only (`data-hal-id`) and outranks the default theme rules.
    */
   private _setColorsStyle(light: Record<string, string>, dark: Record<string, string>): void {
     const el = this.container;
     if (Object.keys(light).length === 0 && Object.keys(dark).length === 0) {
-      this.colorsStyle?.remove();
-      this.colorsStyle = undefined;
+      this.colorsSheet?.remove();
+      this.colorsSheet = undefined;
       el.removeAttribute('data-hal-id');
       return;
     }
@@ -454,18 +596,8 @@ export class HalSearch {
       `${selector} {\n${declarations(light, '  ')}\n}\n` +
       `@media (prefers-color-scheme: dark) {\n  ${selector} {\n${declarations(dark, '    ')}\n  }\n}\n`;
 
-    if (!this.colorsStyle || !this.colorsStyle.parentNode) {
-      const root = this.styleRoot;
-      const isDocument = root.nodeType === 9; // Node.DOCUMENT_NODE
-      const doc = isDocument ? (root as Document) : (root.ownerDocument ?? document);
-      const style = doc.createElement('style');
-      style.setAttribute(COLORS_STYLE_ATTRIBUTE, this.instanceId);
-      // After the default stylesheet (inserted first in <head>); the selector specificity wins anyway.
-      const parent = isDocument ? ((root as Document).head ?? (root as Document).documentElement) : root;
-      parent.appendChild(style);
-      this.colorsStyle = style;
-    }
-    if (this.colorsStyle.textContent !== css) this.colorsStyle.textContent = css;
+    if (this.colorsSheet) this.colorsSheet.update(css);
+    else this.colorsSheet = attachStyleSheet(this.styleRoot, css, { [COLORS_STYLE_ATTRIBUTE]: this.instanceId });
   }
 }
 
@@ -485,6 +617,20 @@ function defaultStyleRoot(container: HTMLElement): Document | ShadowRoot {
   const root = typeof container.getRootNode === 'function' ? container.getRootNode() : undefined;
   if (typeof ShadowRoot !== 'undefined' && root instanceof ShadowRoot) return root;
   return container.ownerDocument ?? document;
+}
+
+/**
+ * True when the query is well-formed but has no criterion: requesting it would list the whole archive.
+ * An invalid query (bad structId or collection code) is not "missing": the request reports its validation error.
+ */
+function isMissingQuery(query: HalQueryInput): boolean {
+  if (hasQueryCriterion(query)) return false;
+  try {
+    buildSolrQuery(query);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** CSS declarations, one per line: `--hal-accent: #0052cc;` */

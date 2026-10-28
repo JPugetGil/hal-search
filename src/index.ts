@@ -15,6 +15,7 @@ export { getDocLinks } from './links';
 export { DOC_TYPE_LABELS, docTypeLabel } from './doctypes';
 export { LEVEL_FIELDS, LEVEL_NAMES, resolveFields, normalizeDomains } from './levels';
 export { DEFAULT_LABELS, resolveLabels, formatLabel } from './labels';
+export { DEFAULT_LOCALE, LOCALES, resolveLocale } from './locales';
 export { LIGHT_PALETTE, DARK_PALETTE, isSafeColor, resolvePalette, paletteToCssVars } from './theme';
 export { renderSvg, renderErrorSvg } from './svg';
 export { fetchSvg } from './headless';
@@ -27,7 +28,6 @@ export {
   buildWebComponentSnippet,
 } from './embed';
 export type {
-  HalSearchOptions,
   HalDoc,
   HalApiResponse,
   HalResponseBody,
@@ -50,7 +50,7 @@ export type {
   PaginationState,
   UrlState,
 } from './types';
-export type { HalSearchState } from './HalSearch';
+export type { HalSearchOptions, HalSearchState } from './HalSearch';
 export type { Palette } from './theme';
 export type { DocLinks } from './links';
 export type { ParseLimits } from './url-params';

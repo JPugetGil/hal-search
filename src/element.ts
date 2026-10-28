@@ -1,7 +1,8 @@
-import type { ColorOptions, HalApiResponse, HalSearchOptions, Labels, SearchParams } from './types';
+import type { ColorOptions, HalApiResponse, Labels, SearchParams } from './types';
 import { HalSearch, HAL_SEARCH_DEFAULTS } from './HalSearch';
-import { hasQueryCriterion } from './query';
+import type { HalSearchOptions } from './HalSearch';
 import { parseUrlParams } from './url-params';
+import { injectElementStyles } from './styles';
 
 // Node safety: this module is imported by index.ts, which the SSR imports in Node.
 // Nothing at module level may touch HTMLElement, customElements, window or document:
@@ -38,6 +39,8 @@ const URL_ATTRIBUTES: Readonly<Record<string, string>> = {
   credit: 'credit',
   // The global `title` attribute would show a tooltip.
   'svg-title': 'title',
+  // The global `lang` attribute: language of the labels ('en', 'fr'), also right for assistive tech.
+  lang: 'lang',
 };
 
 const COLOR_KEYS = ['backgroundColor', 'textColor', 'mainColor'] as const;
@@ -46,10 +49,10 @@ const COLOR_KEYS = ['backgroundColor', 'textColor', 'mainColor'] as const;
 const BOOLEAN_ATTRIBUTES = new Set(['oa', 'credit']);
 
 /** Attributes only understood by the web component. */
-const WIDGET_ATTRIBUTES = ['heading-level', 'labels', 'api-base'];
+const WIDGET_ATTRIBUTES = ['heading-level', 'labels', 'api-base', 'structured-data'];
 
-/** Every attribute observed by `<hal-search>`. */
-export const HAL_SEARCH_ATTRIBUTES: readonly string[] = [...Object.keys(URL_ATTRIBUTES), ...WIDGET_ATTRIBUTES];
+/** Every attribute observed by `<hal-search>`. Annotated pure: bundlers drop it from apps that never use it. */
+export const HAL_SEARCH_ATTRIBUTES: readonly string[] = /* @__PURE__ */ Object.keys(URL_ATTRIBUTES).concat(WIDGET_ATTRIBUTES);
 
 /** Converts the element attributes to the public URL scheme, the input of parseUrlParams. */
 export function attributesToUrlParams(el: Pick<Element, 'getAttribute'>): URLSearchParams {
@@ -96,6 +99,16 @@ function parseHeadingLevel(value: string | null): 2 | 3 | 4 | 5 | 6 | undefined 
   return n === 2 || n === 3 || n === 4 || n === 5 || n === 6 ? n : undefined;
 }
 
+/**
+ * Widget-only boolean attribute: present means true (`<hal-search structured-data>`), except the values
+ * `false` and `0` (frameworks such as React 18 write `structured-data="false"`). Absent: undefined.
+ */
+function parseBooleanAttribute(value: string | null): true | undefined {
+  if (value === null) return undefined;
+  const v = value.trim().toLowerCase();
+  return v === 'false' || v === '0' ? undefined : true;
+}
+
 // ---------------------------------------------------------------------------
 // Element
 // ---------------------------------------------------------------------------
@@ -110,10 +123,12 @@ interface ElementSnapshot {
   search: SearchParams;
 }
 
-function readSnapshot(el: Element): ElementSnapshot | undefined {
+/**
+ * Reads the attributes. A query without criterion (no attribute, `search="*"`) is kept: HalSearch renders
+ * `labels.missingQuery` for it without sending any request (same rule as the SSR: never list the whole archive).
+ */
+function readSnapshot(el: Element): ElementSnapshot {
   const state = parseUrlParams(attributesToUrlParams(el));
-  // Same rule as the SSR: `search="*"` is no criterion and must not list the whole archive.
-  if (!hasQueryCriterion(state.query)) return undefined;
   const apiBase = el.getAttribute('api-base')?.trim();
   return {
     config: {
@@ -123,9 +138,11 @@ function readSnapshot(el: Element): ElementSnapshot | undefined {
       maxAuthors: state.maxAuthors,
       showCredit: state.showCredit,
       title: state.title,
+      locale: state.locale,
       headingLevel: parseHeadingLevel(el.getAttribute('heading-level')),
       labels: parseLabelsAttribute(el.getAttribute('labels')),
       apiBase: apiBase || undefined,
+      structuredData: parseBooleanAttribute(el.getAttribute('structured-data')),
     },
     appearance: {
       theme: state.theme ?? HAL_SEARCH_DEFAULTS.theme,
@@ -163,12 +180,12 @@ function createElementClass(): CustomElementConstructor {
     constructor() {
       super();
       const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
-      const hostStyle = document.createElement('style');
-      hostStyle.textContent = ':host{display:block}:host([hidden]){display:none}';
       this.mount = document.createElement('div');
-      // Lets the host page theme the widget: hal-search::part(container) { --hal-accent: ... }
+      // Lets the host page adjust the layout: hal-search::part(container) { max-width: 40rem }
       this.mount.setAttribute('part', 'container');
-      root.replaceChildren(hostStyle, this.mount);
+      root.replaceChildren(this.mount);
+      // Theme defaults on :host, so `hal-search { --hal-accent: … }` in the page wins over them.
+      injectElementStyles(root);
     }
 
     connectedCallback(): void {
@@ -195,14 +212,19 @@ function createElementClass(): CustomElementConstructor {
     }
 
     private _update(): void {
-      const snapshot = this.isConnected ? readSnapshot(this) : undefined;
-      if (!snapshot) {
+      if (!this.isConnected) {
         this._teardown();
         return;
       }
+      const snapshot = readSnapshot(this);
       const configKey = JSON.stringify(snapshot.config);
       const appearanceKey = JSON.stringify(snapshot.appearance);
       const searchKey = JSON.stringify(snapshot.search);
+
+      // Selects the theme defaults declared on :host (see elementCss).
+      if (this.getAttribute('data-hal-theme') !== snapshot.appearance.theme) {
+        this.setAttribute('data-hal-theme', snapshot.appearance.theme);
+      }
 
       if (!this.instance || configKey !== this.configKey) {
         this.instance?.destroy();
@@ -210,6 +232,9 @@ function createElementClass(): CustomElementConstructor {
           ...snapshot.config,
           ...snapshot.appearance,
           container: this.mount,
+          // The element's own stylesheet is injected by the constructor; the style root receives the
+          // per-instance color overrides of the 'auto' theme.
+          injectStyles: false,
           styleRoot: this.shadowRoot ?? undefined,
           onResults: (response: HalApiResponse) => this._emit('hal-results', { response }),
           onError: (error: Error) => this._emit('hal-error', { error }),
@@ -242,6 +267,7 @@ function createElementClass(): CustomElementConstructor {
     private _teardown(): void {
       this.instance?.destroy();
       this.instance = undefined;
+      this.removeAttribute('data-hal-theme');
       this.configKey = '';
       this.appearanceKey = '';
       this.appearance = undefined;
@@ -257,6 +283,8 @@ function createElementClass(): CustomElementConstructor {
 /**
  * Registers the `<hal-search>` custom element (open Shadow DOM, attributes = public URL scheme in kebab-case).
  * No-op outside the browser (no `customElements`) and when the tag is already defined.
+ * Without a query criterion (no `id-hal`, `orcid`, `struct-id`, `collection`, `search` or `q`, or only Solr syntax
+ * such as `search="*"`) it shows `labels.missingQuery` and sends no request, like HalSearch and the SVG service.
  * Dispatches `hal-results` (`detail.response`) and `hal-error` (`detail.error`), both bubbling and composed.
  */
 export function defineHalSearchElement(tagName = 'hal-search'): void {

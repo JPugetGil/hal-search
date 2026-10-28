@@ -1,16 +1,9 @@
 import { defineConfig } from 'vite';
-import dts from 'vite-plugin-dts';
 
 // Library build: ES module, UMD (main / legacy <script>) and CommonJS (exports "require").
 // The CDN bundle (dist/hal-search.min.js) has its own config: vite.config.cdn.ts.
+// Type declarations are emitted by `tsc -p tsconfig.build.json` (last step of `npm run build`).
 export default defineConfig({
-  plugins: [
-    dts({
-      include: ['src'],
-      exclude: ['src/cdn.ts'],
-      insertTypesEntry: true,
-    }),
-  ],
   build: {
     lib: {
       entry: 'src/index.ts',
@@ -18,10 +11,13 @@ export default defineConfig({
       formats: ['es', 'umd', 'cjs'],
       fileName: (format) => (format === 'cjs' ? 'hal-search.cjs' : `hal-search.${format}.js`),
     },
-    rollupOptions: {
-      external: [],
+    rolldownOptions: {
+      // Vite leaves whitespace in ES library output to protect /* @__PURE__ */ annotations; Rolldown keeps
+      // them while minifying (output.comments.annotation), so the ES file is minified like the others.
+      output: { minify: true },
     },
-    sourcemap: true,
+    // Maps stay in dist/ for local debugging but are not published (package.json "files"): no sourceMappingURL.
+    sourcemap: 'hidden',
     minify: 'oxc',
   },
 });

@@ -16,6 +16,7 @@ import { formatLabel } from './labels';
 import { getDocLinks } from './links';
 import type { DocLinks } from './links';
 import { normalizeDomains } from './levels';
+import { DEFAULT_LOCALE, formatNumber, getDomainLabels } from './locales';
 
 // ---------------------------------------------------------------------------
 // Render context
@@ -47,6 +48,11 @@ export interface HtmlRenderContext {
   highlightAuthors: string[];
   /** Show the "hal-search" credit link */
   showCredit: boolean;
+  /**
+   * Built-in locale of the labels: formats the result count, so that numbers and words agree.
+   * Default: English (like the labels), whatever the page language.
+   */
+  locale?: string;
   /** Called with the 1-based page number when a pagination button is clicked */
   onPageChange: (page: number) => void;
   /** true when this render follows a pagination click: move focus to the start of the results */
@@ -71,11 +77,31 @@ const PAGE_SLOTS = 2 * PAGE_SIBLINGS + 5;
 
 /**
  * Screen-reader-only text. Also applied inline so it stays hidden when the host
- * page disables the default stylesheet (CSSOM writes are allowed by CSP).
+ * page disables the default stylesheet. Written with `style.setProperty` (CSSOM), which a
+ * strict CSP allows, unlike `style="…"` markup or `setAttribute('style', …)`.
  */
-const VISUALLY_HIDDEN_STYLE =
-  'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;' +
-  'clip:rect(0,0,0,0);white-space:nowrap;border:0';
+const VISUALLY_HIDDEN_STYLE: Record<string, string> = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: '0',
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  'white-space': 'nowrap',
+  border: '0',
+};
+
+/** Off-screen helper textarea of the legacy copy path. */
+const COPY_AREA_STYLE: Record<string, string> = {
+  position: 'fixed',
+  top: '0',
+  left: '0',
+  width: '1px',
+  height: '1px',
+  opacity: '0',
+  'pointer-events': 'none',
+};
 
 /** BCP 47-ish language tag as found in HAL's language_s ('en', 'fr', 'pt-BR'...). */
 const LANG_RE = /^[a-z]{2,3}(?:-[a-z0-9]{1,8})*$/i;
@@ -115,9 +141,14 @@ function heading(level: number, className: string): HTMLHeadingElement {
   return node;
 }
 
+/** Inline styles through CSSOM only (allowed by a strict CSP). */
+function setStyles(node: HTMLElement, styles: Record<string, string>): void {
+  for (const [name, value] of Object.entries(styles)) node.style.setProperty(name, value);
+}
+
 function visuallyHidden<T extends HTMLElement>(node: T): T {
   node.classList.add('hal-visually-hidden');
-  node.style.cssText = VISUALLY_HIDDEN_STYLE;
+  setStyles(node, VISUALLY_HIDDEN_STYLE);
   return node;
 }
 
@@ -151,16 +182,6 @@ function docLang(doc: HalDoc): string | undefined {
   if (!Array.isArray(langs) || langs.length !== 1 || typeof langs[0] !== 'string') return undefined;
   const code = langs[0].trim();
   return LANG_RE.test(code) && code.toLowerCase() !== 'und' ? code : undefined;
-}
-
-/** Locale-formatted count, using the closest `lang` of the container (falls back to the runtime locale). */
-function formatCount(n: number, container: HTMLElement): string {
-  const lang = container.closest('[lang]')?.getAttribute('lang') || document.documentElement.lang || undefined;
-  try {
-    return n.toLocaleString(lang);
-  } catch {
-    return String(n);
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -221,6 +242,18 @@ export function renderError(container: HTMLElement, err: Error, labels: Labels):
   const message = formatLabel(labels.error, { message: err?.message ?? String(err) });
   container.appendChild(el('p', 'hal-error', message));
   live.textContent = message;
+}
+
+/**
+ * Renders the "no search criterion" notice (`labels.missingQuery`, class `hal-empty hal-empty--missing-query`)
+ * and announces it. HalSearch shows it instead of requesting the whole archive.
+ */
+export function renderMissingQuery(container: HTMLElement, labels: Labels): void {
+  const live = resetContainer(container);
+  container.removeAttribute('aria-busy');
+
+  container.appendChild(el('p', 'hal-empty hal-empty--missing-query', labels.missingQuery));
+  live.textContent = labels.missingQuery;
 }
 
 // ---------------------------------------------------------------------------
@@ -302,7 +335,7 @@ function legacyCopy(value: string, returnFocus: HTMLElement): boolean {
   area.value = value;
   area.readOnly = true;
   area.setAttribute('aria-hidden', 'true');
-  area.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  setStyles(area, COPY_AREA_STYLE);
   document.body.appendChild(area);
   let ok = false;
   try {
@@ -449,7 +482,7 @@ function buildDetails(doc: HalDoc, lang: string | undefined, ctx: HtmlRenderCont
   if (keywords.length) details.appendChild(buildTagList(keywords, 'hal-article__keywords', 'hal-tag'));
 
   const rawDomains = Array.isArray(doc.domain_s) ? doc.domain_s : [];
-  const domainLabels = Array.isArray(doc.en_domainAllCodeLabel_fs) ? doc.en_domainAllCodeLabel_fs : undefined;
+  const domainLabels = getDomainLabels(doc, ctx.locale);
   if (rawDomains.length || domainLabels?.length) {
     const domains = dedupe(
       normalizeDomains(rawDomains, domainLabels).map((d) => normalizeSpace(decodeEntities(String(d)))),
@@ -665,7 +698,8 @@ export function renderResults(container: HTMLElement, docs: HalDoc[], ctx: HtmlR
   } else {
     const total = Math.max(ctx.pagination.totalFound, docs.length);
     const template = total === 1 ? ctx.labels.resultCountOne : ctx.labels.resultCount;
-    let summary = formatLabel(template, { count: formatCount(total, container) });
+    // In the language of the labels ('1,234 results'), not of the page: '1 234 results' would mix two languages.
+    let summary = formatLabel(template, { count: formatNumber(total, ctx.locale || DEFAULT_LOCALE) });
     if (totalPages > 1) {
       const page = Math.min(totalPages, Math.max(1, Math.floor(ctx.pagination.currentPage) || 1));
       summary += `, ${formatLabel(ctx.labels.pageInfo, { page, pages: totalPages })}`;

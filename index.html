@@ -73,6 +73,14 @@
         </select>
       </label>
       <label>
+        Language
+        <select id="locale">
+          <option value="en">en</option>
+          <option value="fr">fr</option>
+        </select>
+      </label>
+      <label class="inline"><input id="structured-data" type="checkbox" /> JSON-LD</label>
+      <label>
         Theme
         <select id="theme">
           <option value="light">light</option>
@@ -91,7 +99,7 @@
     <div id="results"></div>
 
     <h2>&lt;hal-search&gt; web component</h2>
-    <hal-search id-hal="jpugetgil" rows="3" lvl="2" group-by="year"></hal-search>
+    <hal-search id-hal="jpugetgil" rows="3" lvl="2" group-by="year" lang="fr" structured-data></hal-search>
     <pre id="log"></pre>
 
     <script type="module">
@@ -112,15 +120,17 @@
       }
 
       function search() {
-        // groupBy and output are constructor options: rebuild the instance when they change.
+        // groupBy, output, locale and structuredData are constructor options: rebuild the instance when they change.
         const groupBy = $('group-by').value;
-        const nextOutput = `${$('output').value}/${groupBy}`;
+        const nextOutput = `${$('output').value}/${groupBy}/${$('locale').value}/${$('structured-data').checked}`;
         if (!hs || nextOutput !== output) {
           hs?.destroy();
           hs = new HalSearch({
             container: '#results',
             output: $('output').value,
             groupBy,
+            locale: $('locale').value,
+            structuredData: $('structured-data').checked,
             theme: $('theme').value,
             mainColor: $('main-on').checked ? $('main').value : undefined,
             onResults: (r) => console.log(`[hal-search] ${r.response.numFound} results`, hs.state),
@@ -128,9 +138,8 @@
           });
           output = nextOutput;
         }
-        const q = query();
-        if (Object.keys(q).length === 0) return;
-        hs.search({ query: q, lvl: Number($('lvl').value), rows: Number($('rows').value) || 10 });
+        // An empty value sends no request: the container shows labels.missingQuery.
+        hs.search({ query: query(), lvl: Number($('lvl').value), rows: Number($('rows').value) || 10 });
       }
 
       $('controls').addEventListener('submit', (event) => {

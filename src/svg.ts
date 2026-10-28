@@ -2,6 +2,7 @@ import type { ColorOptions, DetailLevel, HalDoc, Labels, SvgRenderOptions, Theme
 import type { Palette } from './theme';
 import { resolvePalette } from './theme';
 import { formatLabel, resolveLabels } from './labels';
+import { formatNumber, getDomainLabels, isSingular, resolveLocale } from './locales';
 import { normalizeDomains } from './levels';
 import {
   decodeEntities,
@@ -287,11 +288,6 @@ function pill(x: number, top: number, label: string, kind: 'tag' | 'domain' | 'o
   return { markup, width: w };
 }
 
-/** Thousands separators without Intl: the output must not depend on the server locale. */
-function formatCount(count: number): string {
-  return String(Math.max(0, Math.round(count))).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
-
 /** FNV-1a 32-bit hash, base 36: deterministic scope for the embedded stylesheet. */
 function hash(input: string): string {
   let h = 0x811c9dc5;
@@ -371,12 +367,32 @@ function normalizeLevel(lvl: unknown): DetailLevel {
   return lvl === 0 || lvl === 1 || lvl === 2 || lvl === 3 ? lvl : 1;
 }
 
-function svgRoot(w: number, h: number, scope: string, title: string, desc: string, css: string, body: string[]): string {
+/**
+ * Machine-readable state on the root `<svg>`, independent of the language and labels (monitoring, tests):
+ * `data-hal-count` is the total number of matching documents of a list image, `data-hal-error` marks an error image.
+ */
+type RootMarker = { count: number } | { error: true };
+
+/** The root `<svg>`; `css` undefined leaves the `<style>` out (the caller attaches the stylesheet). */
+function svgRoot(
+  w: number,
+  h: number,
+  scope: string,
+  marker: RootMarker,
+  title: string,
+  desc: string,
+  css: string | undefined,
+  body: string[],
+  lang?: string,
+): string {
+  const state = 'error' in marker ? ' data-hal-error="true"' : ` data-hal-count="${Math.max(0, Math.round(marker.count))}"`;
   return [
-    `<svg xmlns="${NS}" width="${w}" height="${n(h)}" viewBox="0 0 ${w} ${n(h)}" role="img" class="hal-svg ${scope}">`,
+    `<svg xmlns="${NS}" width="${w}" height="${n(h)}" viewBox="0 0 ${w} ${n(h)}" role="img" class="hal-svg ${scope}"` +
+      state +
+      (lang ? ` lang="${escapeXml(lang)}">` : '>'),
     `<title>${escapeXml(title)}</title>`,
     ...(desc ? [`<desc>${escapeXml(desc)}</desc>`] : []),
-    `<style>${css}</style>`,
+    ...(css === undefined ? [] : [`<style>${css}</style>`]),
     ...body,
     '</svg>',
   ].join('\n');
@@ -389,6 +405,8 @@ function svgRoot(w: number, h: number, scope: string, title: string, desc: strin
 interface CardContext {
   lvl: DetailLevel;
   labels: Labels;
+  /** Built-in locale (domain labels) */
+  locale: string;
   innerW: number;
   maxAuthors?: number;
   highlightAuthors?: string[];
@@ -508,7 +526,7 @@ function metaRow(doc: HalDoc, ctx: CardContext, top: number): Block {
 /** Domains then keywords on one row; a "+N" pill counts the ones that do not fit. */
 function tagsRow(doc: HalDoc, ctx: CardContext, top: number): Block {
   const domains = dedupe(
-    normalizeDomains(Array.isArray(doc.domain_s) ? doc.domain_s : [], doc.en_domainAllCodeLabel_fs).map((d) =>
+    normalizeDomains(Array.isArray(doc.domain_s) ? doc.domain_s : [], getDomainLabels(doc, ctx.locale)).map((d) =>
       normalizeSpace(decodeEntities(String(d))),
     ),
   );
@@ -622,15 +640,47 @@ function card(x: number, y: number, w: number, body: Block): Block {
 // Public API
 // ---------------------------------------------------------------------------
 
-/** Renders the article list as a standalone SVG string (every dynamic value XML-escaped). */
+/**
+ * An SVG rendered for a page (see renderSvgParts): the markup without its stylesheet, and that stylesheet.
+ * @internal
+ */
+export interface SvgParts {
+  /** `<svg>` markup without `<style>`: its colors and fonts come from `css` */
+  markup: string;
+  /** The stylesheet renderSvg embeds, scoped to the root's `hal-svg-<hash>` class */
+  css: string;
+}
+
+/**
+ * Renders the article list as a standalone SVG string (every dynamic value XML-escaped).
+ * The root carries `data-hal-count`: `totalFound` as a plain integer, whatever the language.
+ */
 export function renderSvg(docs: HalDoc[], options: SvgRenderOptions): string {
+  return render(docs, options, true).markup;
+}
+
+/**
+ * renderSvg for an inline SVG in a page: the same markup without the embedded `<style>`, which a strict
+ * Content-Security-Policy (`style-src` without 'unsafe-inline') blocks; the caller attaches `css` as a
+ * constructable stylesheet instead. Several inline SVGs can share a page: the rules are scoped to the root's
+ * `hal-svg-<hash>` class, a hash of the rules themselves.
+ * @internal Used by HalSearch (output 'svg').
+ */
+export function renderSvgParts(docs: HalDoc[], options: SvgRenderOptions): SvgParts {
+  return render(docs, options, false);
+}
+
+function render(docs: HalDoc[], options: SvgRenderOptions, embedStyle: boolean): SvgParts {
   const opts = options ?? ({ totalFound: 0 } as SvgRenderOptions);
   const list = (Array.isArray(docs) ? docs : []).filter((d) => d && typeof d === 'object');
-  const labels = resolveLabels(opts.labels);
+  // Built-in locale ('en' when absent or unknown): base labels, number formatting and plural forms.
+  const locale = resolveLocale(opts.locale);
+  const labels = resolveLabels(opts.labels, locale);
   const lvl = normalizeLevel(opts.lvl);
   const W = normalizeWidth(opts.width);
   const total = typeof opts.totalFound === 'number' && Number.isFinite(opts.totalFound) ? opts.totalFound : list.length;
-  const count = formatCount(total);
+  // Thousands separators of the locale ('9 183' in French: narrow no-break space, measured like a space).
+  const count = formatNumber(total, locale);
   const title = normalizeSpace(typeof opts.title === 'string' ? opts.title : '') || labels.title;
   const halUrl = safeHref(opts.halUrl);
   const colors = { backgroundColor: opts.backgroundColor, textColor: opts.textColor, mainColor: opts.mainColor };
@@ -641,14 +691,15 @@ export function renderSvg(docs: HalDoc[], options: SvgRenderOptions): string {
   const ctx: CardContext = {
     lvl,
     labels,
+    locale,
     innerW: cardW - CARD_PAD_X * 2,
     maxAuthors: opts.maxAuthors,
     highlightAuthors: opts.highlightAuthors,
   };
 
   // Header: title (left) and result count (right) on the accent bar.
-  // Singular wording for exactly one result.
-  const countText = formatLabel(total === 1 ? labels.resultCountOne : labels.resultCount, { count });
+  // Singular wording for the locale's 'one' plural category (1 in English, 0 and 1 in French).
+  const countText = formatLabel(isSingular(total, locale) ? labels.resultCountOne : labels.resultCount, { count });
   const countW = Math.min(width(countText, HEADER_COUNT), W / 3);
   const headerTitle = ellipsize(title, W - PAD * 3 - countW, HEADER_TITLE);
   body.push(
@@ -703,10 +754,23 @@ export function renderSvg(docs: HalDoc[], options: SvgRenderOptions): string {
 
   const background = `<rect x="0.5" y="0.5" width="${W - 1}" height="${n(H - 1)}" rx="${RADIUS}" class="hal-bg"/>`;
   const desc = list.map((d) => getTitle(d, labels)).join('\n');
-  return svgRoot(W, H, scope, `${title} – ${countText}`, desc, css, [background, ...body]);
+  // `lang` only when a locale was asked for: the default output stays unchanged.
+  const lang = typeof opts.locale === 'string' && opts.locale.trim() ? locale : undefined;
+  const markup = svgRoot(
+    W,
+    H,
+    scope,
+    { count: total },
+    `${title} – ${countText}`,
+    desc,
+    embedStyle ? css : undefined,
+    [background, ...body],
+    lang,
+  );
+  return { markup, css };
 }
 
-/** Renders a small standalone SVG showing an error message (escaped). */
+/** Renders a small standalone SVG showing an error message (escaped). Its root carries `data-hal-error="true"`. */
 export function renderErrorSvg(message: string, options?: { theme?: ThemeName; width?: number }): string {
   const W = normalizeWidth(options?.width);
   const { scope, css } = buildStylesheet(normalizeTheme(options?.theme), {});
@@ -722,5 +786,5 @@ export function renderErrorSvg(message: string, options?: { theme?: ThemeName; w
     textEl(PAD + iconR, baseline(H / 2 - CITATION.line / 2, { ...CITATION, bold: true }), '!', 'hal-error-icon-text', { ...CITATION, bold: true }, { anchor: 'middle' }),
     ...lines.map((line, i) => textEl(textX, baseline(top + i * CITATION.line, CITATION), line, 'hal-error-text', CITATION)),
   ];
-  return svgRoot(W, H, scope, text, '', css, body);
+  return svgRoot(W, H, scope, { error: true }, text, '', css, body);
 }

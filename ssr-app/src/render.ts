@@ -5,8 +5,8 @@ import {
   parseUrlParams,
   renderErrorSvg,
   renderSvg,
-} from 'hal-search';
-import type { HalApiResponse, HalFilters, HalQuery, SvgRenderOptions, UrlState } from 'hal-search';
+} from 'hal-search/svg';
+import type { HalApiResponse, HalFilters, HalQuery, SvgRenderOptions, UrlState } from 'hal-search/svg';
 
 // DOM-free request handlers of the SVG image service (GitHub README / Markdown).
 // No global state: every request builds its own values, so concurrent requests never interfere.
@@ -49,9 +49,12 @@ const USER_AGENT = `hal-search-ssr (+${REPO_URL})`;
 /** Markup that must never reach a client. Text content is XML-escaped, so a literal match is real markup. */
 const UNSAFE_MARKUP = /<\s*\/?\s*(script|foreignObject|iframe|object|embed)\b/i;
 
-/** Static last-resort image (no dynamic content) when even the error renderer fails. */
-const FALLBACK_ERROR_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="48" viewBox="0 0 400 48" role="img" aria-label="Error">' +
+/**
+ * Static last-resort image (no dynamic content) when even the error renderer fails. Marked `data-hal-error` like
+ * renderErrorSvg's images (.github/scripts/health-check.mjs detects error images by that marker).
+ */
+export const FALLBACK_ERROR_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="48" viewBox="0 0 400 48" role="img" aria-label="Error" data-hal-error="true">' +
   '<rect width="400" height="48" rx="6" fill="#fdecea" stroke="#f5c2c0"/>' +
   '<text x="16" y="29" font-family="sans-serif" font-size="14" fill="#8a1c1c">Could not render the publication list.</text>' +
   '</svg>';
@@ -64,6 +67,19 @@ export const ERROR_MESSAGES = {
   upstream: 'Could not load publications from HAL. Please try again later.',
   internal: 'Could not render the publication list.',
 } as const;
+
+type ErrorMessages = Record<keyof typeof ERROR_MESSAGES, string>;
+
+/** ERROR_MESSAGES in the other built-in locales (the `lang` param); missing languages use English. */
+export const LOCALIZED_ERROR_MESSAGES: Readonly<Record<string, ErrorMessages>> = {
+  fr: {
+    missingQuery: 'Requête manquante\u00a0: ajoutez idHal, orcid, collection, structId, search ou q à l’URL de l’image.',
+    badQuery: 'HAL a refusé cette requête\u00a0: vérifiez les paramètres de l’URL.',
+    timeout: 'HAL n’a pas répondu à temps. Veuillez réessayer plus tard.',
+    upstream: 'Impossible de charger les publications depuis HAL. Veuillez réessayer plus tard.',
+    internal: 'Impossible d’afficher la liste des publications.',
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -98,8 +114,8 @@ export interface HandlerDeps {
 class UpstreamError extends Error {
   constructor(
     message: string,
-    /** Safe to show in the image */
-    readonly userMessage: string,
+    /** Key of the message shown in the image (safe, translated with the `lang` param) */
+    readonly userMessage: keyof typeof ERROR_MESSAGES,
     /** Underlying error, logged server-side only */
     readonly detail?: unknown,
   ) {
@@ -173,13 +189,15 @@ export async function handleSvgRequest(
 ): Promise<SsrResponse> {
   const log = deps.log ?? defaultLog;
   let errorTheme: 'light' | 'dark' = 'light';
+  let messages: ErrorMessages = ERROR_MESSAGES;
 
   try {
     const state = parseUrlParams(searchParams, { maxRows: MAX_ROWS });
     if (state.theme === 'dark') errorTheme = 'dark';
+    if (state.locale) messages = LOCALIZED_ERROR_MESSAGES[state.locale] ?? ERROR_MESSAGES;
 
     if (!hasQueryCriterion(state.query)) {
-      return errorResponse(ERROR_MESSAGES.missingQuery, errorTheme, log);
+      return errorResponse(messages.missingQuery, errorTheme, log);
     }
 
     const rows = clampRows(state.rows);
@@ -197,6 +215,7 @@ export async function handleSvgRequest(
           lvl,
           rows,
           start: (p - 1) * rows,
+          locale: state.locale,
         }),
         deps,
       );
@@ -222,16 +241,16 @@ export async function handleSvgRequest(
     if (UNSAFE_MARKUP.test(svg)) {
       // Defence in depth: the renderer escapes everything, this should never happen.
       log('renderSvg produced unsafe markup, response blocked', { query: searchParams.toString() });
-      return errorResponse(ERROR_MESSAGES.internal, errorTheme, log);
+      return errorResponse(messages.internal, errorTheme, log);
     }
     return svgResponse(svg, CACHE_SUCCESS);
   } catch (err) {
     if (err instanceof UpstreamError) {
       log(err.message, { query: searchParams.toString(), detail: err.detail });
-      return errorResponse(err.userMessage, errorTheme, log);
+      return errorResponse(messages[err.userMessage], errorTheme, log);
     }
     log('SVG rendering failed', { query: searchParams.toString(), error: err });
-    return errorResponse(ERROR_MESSAGES.internal, errorTheme, log);
+    return errorResponse(messages.internal, errorTheme, log);
   }
 }
 
@@ -250,7 +269,7 @@ async function fetchHal(url: string, deps: HandlerDeps): Promise<HalApiResponse>
     });
     if (!res.ok) {
       // 400 = invalid Solr syntax or parameter: the URL must be fixed, retrying won't help.
-      const userMessage = res.status === 400 ? ERROR_MESSAGES.badQuery : ERROR_MESSAGES.upstream;
+      const userMessage = res.status === 400 ? 'badQuery' : 'upstream';
       throw new UpstreamError(`HAL API HTTP ${res.status} after ${Date.now() - startedAt} ms for ${url}`, userMessage);
     }
     data = await res.json();
@@ -259,7 +278,7 @@ async function fetchHal(url: string, deps: HandlerDeps): Promise<HalApiResponse>
     const timedOut = signal.aborted;
     throw new UpstreamError(
       `HAL API ${timedOut ? 'timeout' : 'request failed'} after ${Date.now() - startedAt} ms for ${url}`,
-      timedOut ? ERROR_MESSAGES.timeout : ERROR_MESSAGES.upstream,
+      timedOut ? 'timeout' : 'upstream',
       err,
     );
   }
@@ -267,14 +286,14 @@ async function fetchHal(url: string, deps: HandlerDeps): Promise<HalApiResponse>
   const response = data as (Partial<HalApiResponse> & { error?: unknown }) | null;
   if (response?.error !== undefined && !response.response) {
     // HAL answers a malformed query (e.g. `q=title_s:(`) with HTTP 200 and `{"error": {...}}`.
-    throw new UpstreamError(`HAL API error ${JSON.stringify(response.error)} for ${url}`, ERROR_MESSAGES.badQuery);
+    throw new UpstreamError(`HAL API error ${JSON.stringify(response.error)} for ${url}`, 'badQuery');
   }
   const status = response?.responseHeader?.status;
   if (status !== undefined && status !== 0) {
-    throw new UpstreamError(`HAL API status ${status} for ${url}`, ERROR_MESSAGES.upstream);
+    throw new UpstreamError(`HAL API status ${status} for ${url}`, 'upstream');
   }
   if (!response?.response || !Array.isArray(response.response.docs)) {
-    throw new UpstreamError(`Unexpected HAL API response for ${url}`, ERROR_MESSAGES.upstream);
+    throw new UpstreamError(`Unexpected HAL API response for ${url}`, 'upstream');
   }
   return response as HalApiResponse;
 }
@@ -301,6 +320,7 @@ function toDisplayOptions(state: UrlState): Omit<SvgRenderOptions, 'totalFound'>
     textColor: state.textColor,
     mainColor: state.mainColor,
     title: state.title,
+    locale: state.locale,
   };
 }
 
@@ -421,6 +441,7 @@ const LANDING_HTML = `<!doctype html>
 <tr><td><code>sort</code>, <code>groupBy</code></td><td><code>date-desc</code> (default), <code>date-asc</code> or <code>relevance</code>; group by <code>year</code> or <code>docType</code>.</td></tr>
 <tr><td><code>theme</code>, <code>bg</code>, <code>text</code>, <code>main</code></td><td><code>light</code>, <code>dark</code> or <code>auto</code>; card background, text and accent colors (URL-encode <code>#</code> as <code>%23</code>).</td></tr>
 <tr><td><code>title</code>, <code>highlight</code>, <code>maxAuthors</code>, <code>credit</code></td><td>Header title, authors to emphasise (comma-separated names or idHal), authors shown before "et al.", <code>credit=0</code> hides the credit line.</td></tr>
+<tr><td><code>lang</code></td><td>Language of the labels and numbers: <code>en</code> (default) or <code>fr</code>.</td></tr>
 </tbody>
 </table>
 

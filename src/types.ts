@@ -23,6 +23,8 @@ export interface HalDoc {
   keyword_s?: string[];
   domain_s?: string[];
   en_domainAllCodeLabel_fs?: string[];
+  /** French domain labels, fetched instead of en_domainAllCodeLabel_fs for locale 'fr' */
+  fr_domainAllCodeLabel_fs?: string[];
   language_s?: string[];
   peerReviewing_s?: string;
   conferenceTitle_s?: string;
@@ -126,7 +128,7 @@ export interface Labels {
   pageInfo: string;
   /** '{count} results' — count is already locale-formatted */
   resultCount: string;
-  /** Singular form of resultCount: '{count} result' */
+  /** Singular form of resultCount: '{count} result' (plural category 'one' of the locale: 0 and 1 in French) */
   resultCountOne: string;
   /** aria-label of the pagination nav: 'Search results pages' */
   pagination: string;
@@ -162,6 +164,8 @@ export interface Labels {
   opensInNewTab: string;
   /** Group heading for documents without a year: 'Undated' */
   undated: string;
+  /** Shown instead of a request when the query has no criterion (see hasQueryCriterion): 'No search criterion given.' */
+  missingQuery: string;
   /** Human-readable labels for HAL docType_s codes, e.g. { ART: 'Journal article' } */
   docTypes: Record<string, string>;
 }
@@ -178,6 +182,12 @@ export interface DisplayOptions extends ColorOptions {
   highlightAuthors?: string[];
   /** Max authors shown before "et al.". Default: 10. 0 = no limit */
   maxAuthors?: number;
+  /**
+   * Language of the labels and of number formatting: 'en' (default) or 'fr'. Region subtags are
+   * accepted ('fr-FR' → 'fr'); other languages fall back to English. `labels` overrides apply on top.
+   * HTML output: also sets the `lang` attribute of the container.
+   */
+  locale?: string;
   /** Override any user-facing string */
   labels?: Partial<Labels>;
   /** Show the "hal-search" credit link. Default: true */
@@ -195,33 +205,9 @@ export interface SearchParams {
   lvl?: DetailLevel;
 }
 
-/** Options passed to the HalSearch constructor */
-export interface HalSearchOptions extends DisplayOptions {
-  /** DOM element or CSS selector for the render target */
-  container: HTMLElement | string;
-  /** HAL API base URL — override for proxies/testing. Default: HAL production */
-  apiBase?: string;
-  /** Number of results per page. Default: 10 */
-  rows?: number;
-  /** Default: 'date-desc' */
-  sort?: SortOrder;
-  /** Default filters, merged under the filters given to search() */
-  filters?: HalFilters;
-  /** Render the article list as HTML cards or as an inline SVG. Default: 'html' */
-  output?: OutputFormat;
-  /** Inject default CSS. Default: true */
-  injectStyles?: boolean;
-  /** Where default CSS is injected. Default: document (head). The web component passes its ShadowRoot. */
-  styleRoot?: Document | ShadowRoot;
-  /** Heading level of article titles in HTML output. Default: 3 */
-  headingLevel?: 2 | 3 | 4 | 5 | 6;
-  /** SVG header title (output 'svg'). Default: labels.title */
-  title?: string;
-  /** Called after each successful fetch. Exceptions thrown here never replace the rendered results. */
-  onResults?: (response: HalApiResponse) => void;
-  /** Called on fetch error (aborted requests are not errors) */
-  onError?: (err: Error) => void;
-}
+// HalSearchOptions (the HalSearch constructor options) lives in HalSearch.ts: it names DOM types
+// (HTMLElement, Document, ShadowRoot), and this module is also part of the DOM-free `hal-search/svg`
+// entry, whose declarations must compile in a Node project without the DOM lib.
 
 /** Parameters of a single HAL API request */
 export interface FetchParams {
@@ -232,6 +218,8 @@ export interface FetchParams {
   rows: number;
   start: number;
   apiBase?: string;
+  /** Language of the domain labels fetched from lvl 2 ('fr' → fr_domainAllCodeLabel_fs). Default: English */
+  locale?: string;
   signal?: AbortSignal;
 }
 

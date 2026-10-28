@@ -9,7 +9,8 @@ import type {
   UrlState,
 } from './types';
 import { isSafeColor } from './theme';
-import { normaliseOrcid } from './query';
+import { escapeSolrValue, normaliseOrcid } from './query';
+import { matchLocale } from './locales';
 
 export interface ParseLimits {
   /** Upper bound for `rows`. Default: 50 */
@@ -136,10 +137,20 @@ function parseQuery(params: URLSearchParams): HalQuery {
   if (collection) query.collection = collection;
   const text = freeText(str(params, 'search'), MAX_QUERY_LENGTH);
   if (text) query.text = text;
-  // `uid` is the ≤0.4 name of the raw query.
-  const solr = freeText(str(params, 'q'), MAX_QUERY_LENGTH) ?? freeText(str(params, 'uid'), MAX_QUERY_LENGTH);
+  const solr = freeText(str(params, 'q'), MAX_QUERY_LENGTH) ?? legacyUid(str(params, 'uid'));
   if (solr) query.solr = solr;
   return query;
+}
+
+/**
+ * `uid` is the ≤0.4 name of the raw query. 0.4 always sent it as a quoted phrase: plain text keeps that
+ * meaning (`uid=Jey Puget Gil` → `"Jey Puget Gil"`), field queries such as `authIdHal_s:x` are passed raw
+ * (quoting them made 0.4 return no result).
+ */
+function legacyUid(value: string | undefined): string | undefined {
+  const uid = freeText(value, MAX_QUERY_LENGTH);
+  if (!uid) return undefined;
+  return /[:"]/.test(uid) ? uid : `"${escapeSolrValue(uid)}"`;
 }
 
 function parseFilters(params: URLSearchParams): HalFilters {
@@ -212,6 +223,10 @@ export function parseUrlParams(params: URLSearchParams, limits?: ParseLimits): U
   const credit = bool(str(params, 'credit'));
   if (credit !== undefined) state.showCredit = credit;
 
+  // Built-in languages only ('fr-FR' → 'fr'); others are dropped, i.e. English.
+  const locale = matchLocale(str(params, 'lang'));
+  if (locale) state.locale = locale;
+
   return state;
 }
 
@@ -236,7 +251,12 @@ function setList(params: URLSearchParams, name: string, values: unknown): void {
   if (items.length > 0) params.set(name, items.join(','));
 }
 
-/** Serialises a state to the public URL scheme (omits defaults and empty values). */
+/**
+ * Serialises a state to the public URL scheme (omits defaults and empty values).
+ * `lang` is the exception: it is written whenever `locale` is a built-in language, English included, so
+ * an explicit choice survives (`<hal-search lang="en">` also tells assistive technologies the widget is in
+ * English on a page in another language). Without `locale`, no `lang`; unsupported languages are dropped.
+ */
 export function toUrlParams(state: Partial<UrlState>): URLSearchParams {
   const params = new URLSearchParams();
   const query = state.query ?? {};
@@ -269,6 +289,8 @@ export function toUrlParams(state: Partial<UrlState>): URLSearchParams {
   setNumber(params, 'maxAuthors', state.maxAuthors, DEFAULTS.maxAuthors);
   setString(params, 'title', state.title);
   if (state.showCredit === false) params.set('credit', '0');
+  const locale = matchLocale(state.locale);
+  if (locale) params.set('lang', locale);
 
   return params;
 }

@@ -19,15 +19,15 @@ import { assertWellFormedXml } from './helpers/xml';
 // Library under test
 // ---------------------------------------------------------------------------
 
-// The service runs against the real library (`hal-search` → src/index.ts, also proving the entry point is
-// importable in Node, as SSR dev mode requires). Only renderSvg can be replaced per test.
+// The service runs against the real library (`hal-search/svg` → src/svg-entry.ts, also proving the entry point
+// is importable in Node, as SSR dev mode requires). Only renderSvg can be replaced per test.
 const lib = vi.hoisted(() => ({
   /** Per-test replacement of renderSvg (e.g. a deliberately unsafe renderer) */
   renderSvgOverride: undefined as undefined | ((...args: unknown[]) => string),
 }));
 
-vi.mock('hal-search', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../src/index')>();
+vi.mock('hal-search/svg', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/svg-entry')>();
   return {
     ...actual,
     renderSvg: (...args: Parameters<typeof actual.renderSvg>) =>
@@ -374,6 +374,82 @@ describe('SVG endpoint: errors', () => {
     expectSafeSvg(res);
     expect(res.body).not.toContain('/srv/app');
     expect(textOf(res.body)).toContain('Could not render the publication list');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Language
+// ---------------------------------------------------------------------------
+
+describe('SVG endpoint: lang', () => {
+  const frenchCount = (n: number) => new Intl.NumberFormat('fr').format(n);
+
+  it('renders French labels, document types and numbers with lang=fr', async () => {
+    const { deps: d } = deps(async () => halResponse([doc('Un article', { openAccess_bool: true })], 9183));
+    const res = await handleSvgRequest(params({ idHal: 'jdoe', lang: 'fr', lvl: '2' }), d);
+    expectSafeSvg(res);
+    expect(res.body).toMatch(/^<svg [^>]* lang="fr">/);
+    // Raw body: textOf() would turn the no-break space of the French number format into a space
+    expect(frenchCount(9183)).toMatch(/^9[\u00a0\u202f]183$/);
+    expect(res.body).toContain(`${frenchCount(9183)} résultats`);
+    expect(res.body).toContain(`Voir les ${frenchCount(9183)} publications sur HAL`);
+    const text = textOf(res.body);
+    expect(text).toContain('Article dans une revue');
+    expect(text).toContain('Libre accès');
+    expect(text).not.toMatch(/results|Journal article|Open Access/);
+    expect(res.headers['Cache-Control']).toBe(CACHE_SUCCESS);
+  });
+
+  it('asks HAL for the French domain labels', async () => {
+    const { deps: d, fetchMock } = deps(async () =>
+      halResponse([doc('Un article', { domain_s: ['0.info', '1.info.info-db'], fr_domainAllCodeLabel_fs: [
+        'info_FacetSep_Informatique [cs]',
+        'info.info-db_FacetSep_Informatique [cs]/Base de données [cs.DB]',
+      ] })]),
+    );
+    const res = await handleSvgRequest(params({ idHal: 'jdoe', lang: 'fr', lvl: '2' }), d);
+    expectSafeSvg(res);
+    const fl = halRequest(fetchMock).searchParams.get('fl')?.split(',');
+    expect(fl).toContain('fr_domainAllCodeLabel_fs');
+    expect(fl).not.toContain('en_domainAllCodeLabel_fs');
+    expect(textOf(res.body)).toContain('Base de données [cs.DB]');
+  });
+
+  it('uses the French singular for one result and accepts region subtags', async () => {
+    const { deps: d } = deps(async () => halResponse([doc('Un article')], 1));
+    const res = await handleSvgRequest(params({ idHal: 'jdoe', lang: 'fr-FR' }), d);
+    expectSafeSvg(res);
+    expect(textOf(res.body)).toContain('1 résultat');
+    expect(textOf(res.body)).not.toContain('1 résultats');
+    expect(textOf(res.body)).toContain('Voir cette publication sur HAL');
+  });
+
+  it('falls back to English for an unknown language (no lang attribute)', async () => {
+    const { deps: d } = deps(async () => halResponse([doc('A paper')], 1234));
+    const res = await handleSvgRequest(params({ idHal: 'jdoe', lang: 'xx' }), d);
+    expectSafeSvg(res);
+    expect(res.body).not.toMatch(/^<svg [^>]*lang=/);
+    expect(textOf(res.body)).toContain('1,234 results');
+  });
+
+  it('translates the error images', async () => {
+    const missing = await handleSvgRequest(params({ lang: 'fr' }), deps(async () => halResponse([])).deps);
+    expectSafeSvg(missing);
+    expect(textOf(missing.body)).toContain('Requête manquante');
+    expect(missing.headers['Cache-Control']).toBe(CACHE_ERROR);
+
+    const { deps: d, log } = deps(async () => new Response('{}', { status: 400 }));
+    const rejected = await handleSvgRequest(params({ idHal: 'jdoe', lang: 'fr' }), d);
+    expectSafeSvg(rejected);
+    expect(textOf(rejected.body)).toContain('HAL a refusé cette requête');
+    expect(log).toHaveBeenCalled();
+  });
+
+  it('keeps lang on the legacy route', async () => {
+    const { deps: d } = deps(async () => halResponse([doc('Un article')], 2));
+    const res = await handleRequest(toSsrRequest('GET', '/?idHal=jdoe&lang=fr'), d);
+    expectSafeSvg(res);
+    expect(textOf(res.body)).toContain('2 résultats');
   });
 });
 

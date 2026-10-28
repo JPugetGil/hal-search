@@ -31,6 +31,7 @@ describe('DEFAULT_LABELS', () => {
       title: 'Publications',
       opensInNewTab: '(opens in a new tab)',
       undated: 'Undated',
+      missingQuery: 'No search criterion given.',
     });
   });
 
