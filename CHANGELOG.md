@@ -3,7 +3,7 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/) (0.x: minor versions may break).
 
-## [0.5.0] - unreleased
+## [0.5.0] - 2026-10-28
 
 A rewrite focused on two audiences: researchers (GitHub README, personal page) and lab webmasters (collections, CMS).
 Upgrading: see [docs/migration-0.5.md](docs/migration-0.5.md).
@@ -101,7 +101,7 @@ Upgrading: see [docs/migration-0.5.md](docs/migration-0.5.md).
 - SSR application (Vite + Express) rendering HTML or SVG.
 - Interactive example deployed to GitHub Pages, npm publish workflow.
 
-[0.5.0]: https://github.com/JPugetGil/hal-search/compare/v0.4.0...HEAD
+[0.5.0]: https://github.com/JPugetGil/hal-search/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/JPugetGil/hal-search/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/JPugetGil/hal-search/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/JPugetGil/hal-search/compare/v0.1.0...v0.2.0
