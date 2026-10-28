@@ -49,9 +49,12 @@ const USER_AGENT = `hal-search-ssr (+${REPO_URL})`;
 /** Markup that must never reach a client. Text content is XML-escaped, so a literal match is real markup. */
 const UNSAFE_MARKUP = /<\s*\/?\s*(script|foreignObject|iframe|object|embed)\b/i;
 
-/** Static last-resort image (no dynamic content) when even the error renderer fails. */
-const FALLBACK_ERROR_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="48" viewBox="0 0 400 48" role="img" aria-label="Error">' +
+/**
+ * Static last-resort image (no dynamic content) when even the error renderer fails. Marked `data-hal-error` like
+ * renderErrorSvg's images (.github/scripts/health-check.mjs detects error images by that marker).
+ */
+export const FALLBACK_ERROR_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="48" viewBox="0 0 400 48" role="img" aria-label="Error" data-hal-error="true">' +
   '<rect width="400" height="48" rx="6" fill="#fdecea" stroke="#f5c2c0"/>' +
   '<text x="16" y="29" font-family="sans-serif" font-size="14" fill="#8a1c1c">Could not render the publication list.</text>' +
   '</svg>';

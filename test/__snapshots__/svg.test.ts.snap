@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`renderSvg — snapshots > lvl 0 1`] = `
-"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="326" viewBox="0 0 800 326" role="img" class="hal-svg hal-svg-hmcxuc">
+"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="326" viewBox="0 0 800 326" role="img" class="hal-svg hal-svg-hmcxuc" data-hal-count="1234">
 <title>Publications – 1,234 results</title>
 <desc>ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs
 ConVer-G: Concurrent versioning of knowledge graphs
@@ -35,7 +35,7 @@ Condensed Representation for Snapshot-Based RDF Graphs</desc>
 `;
 
 exports[`renderSvg — snapshots > lvl 1 1`] = `
-"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="404" viewBox="0 0 800 404" role="img" class="hal-svg hal-svg-1awob1h">
+"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="404" viewBox="0 0 800 404" role="img" class="hal-svg hal-svg-1awob1h" data-hal-count="1234">
 <title>Publications – 1,234 results</title>
 <desc>ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs
 ConVer-G: Concurrent versioning of knowledge graphs
@@ -77,7 +77,7 @@ Condensed Representation for Snapshot-Based RDF Graphs</desc>
 `;
 
 exports[`renderSvg — snapshots > lvl 2 1`] = `
-"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="456" viewBox="0 0 800 456" role="img" class="hal-svg hal-svg-hmcxuc">
+"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="456" viewBox="0 0 800 456" role="img" class="hal-svg hal-svg-hmcxuc" data-hal-count="1234">
 <title>Publications – 1,234 results</title>
 <desc>ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs
 ConVer-G: Concurrent versioning of knowledge graphs
@@ -128,7 +128,7 @@ Condensed Representation for Snapshot-Based RDF Graphs</desc>
 `;
 
 exports[`renderSvg — snapshots > lvl 3 1`] = `
-"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="541" viewBox="0 0 800 541" role="img" class="hal-svg hal-svg-1awob1h">
+"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="541" viewBox="0 0 800 541" role="img" class="hal-svg hal-svg-1awob1h" data-hal-count="1234">
 <title>Publications – 1,234 results</title>
 <desc>ConVer-G: A Suite for Versioning, Querying and Visualization of Dynamic Knowledge Graphs
 ConVer-G: Concurrent versioning of knowledge graphs

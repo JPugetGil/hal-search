@@ -161,6 +161,16 @@ describe('renderSvg — document', () => {
     expect(render(DOCS, { lvl: 3, theme: 'auto' })).toBe(render(DOCS, { lvl: 3, theme: 'auto' }));
   });
 
+  it('carries the total on the root as a plain integer, whatever the language (data-hal-count)', () => {
+    const root = (svg: string) => /^<svg[^>]*>/.exec(svg)?.[0] ?? '';
+    expect(root(render(DOCS, {}))).toContain(' data-hal-count="1234"');
+    expect(root(renderSvg(DOCS, { totalFound: 9183, locale: 'fr' }))).toContain(' data-hal-count="9183"');
+    expect(root(renderSvg([], { totalFound: 0 }))).toContain(' data-hal-count="0"');
+    expect(root(renderSvg(DOCS, { totalFound: -3 }))).toContain(' data-hal-count="0"');
+    expect(root(renderSvg(DOCS, { totalFound: Number.NaN }))).toContain(` data-hal-count="${DOCS.length}"`);
+    expect(root(render(DOCS, {}))).not.toContain('data-hal-error');
+  });
+
   it('scales from an explicit width', () => {
     expect(render(DOCS, { width: 400 })).toMatch(/width="400" height="[\d.]+" viewBox="0 0 400 /);
     expect(render(DOCS, { width: 10 })).toContain('width="320"');
@@ -487,6 +497,12 @@ describe('renderErrorSvg', () => {
     expect(svg).toContain('role="img"');
     expect(svg).toContain(`fill:${LIGHT_PALETTE.errorBg}`);
     expect(svg).not.toMatch(/<script/i);
+  });
+
+  it('marks its root as an error image (data-hal-error), with no count', () => {
+    const root = /^<svg[^>]*>/.exec(renderErrorSvg('Requête manquante'))?.[0] ?? '';
+    expect(root).toContain(' data-hal-error="true"');
+    expect(root).not.toContain('data-hal-count');
   });
 
   it('supports the dark and auto themes and a custom width', () => {

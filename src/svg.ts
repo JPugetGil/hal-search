@@ -367,19 +367,28 @@ function normalizeLevel(lvl: unknown): DetailLevel {
   return lvl === 0 || lvl === 1 || lvl === 2 || lvl === 3 ? lvl : 1;
 }
 
+/**
+ * Machine-readable state on the root `<svg>`, independent of the language and labels (monitoring, tests):
+ * `data-hal-count` is the total number of matching documents of a list image, `data-hal-error` marks an error image.
+ */
+type RootMarker = { count: number } | { error: true };
+
 /** The root `<svg>`; `css` undefined leaves the `<style>` out (the caller attaches the stylesheet). */
 function svgRoot(
   w: number,
   h: number,
   scope: string,
+  marker: RootMarker,
   title: string,
   desc: string,
   css: string | undefined,
   body: string[],
   lang?: string,
 ): string {
+  const state = 'error' in marker ? ' data-hal-error="true"' : ` data-hal-count="${Math.max(0, Math.round(marker.count))}"`;
   return [
     `<svg xmlns="${NS}" width="${w}" height="${n(h)}" viewBox="0 0 ${w} ${n(h)}" role="img" class="hal-svg ${scope}"` +
+      state +
       (lang ? ` lang="${escapeXml(lang)}">` : '>'),
     `<title>${escapeXml(title)}</title>`,
     ...(desc ? [`<desc>${escapeXml(desc)}</desc>`] : []),
@@ -642,7 +651,10 @@ export interface SvgParts {
   css: string;
 }
 
-/** Renders the article list as a standalone SVG string (every dynamic value XML-escaped). */
+/**
+ * Renders the article list as a standalone SVG string (every dynamic value XML-escaped).
+ * The root carries `data-hal-count`: `totalFound` as a plain integer, whatever the language.
+ */
 export function renderSvg(docs: HalDoc[], options: SvgRenderOptions): string {
   return render(docs, options, true).markup;
 }
@@ -744,11 +756,21 @@ function render(docs: HalDoc[], options: SvgRenderOptions, embedStyle: boolean):
   const desc = list.map((d) => getTitle(d, labels)).join('\n');
   // `lang` only when a locale was asked for: the default output stays unchanged.
   const lang = typeof opts.locale === 'string' && opts.locale.trim() ? locale : undefined;
-  const markup = svgRoot(W, H, scope, `${title} – ${countText}`, desc, embedStyle ? css : undefined, [background, ...body], lang);
+  const markup = svgRoot(
+    W,
+    H,
+    scope,
+    { count: total },
+    `${title} – ${countText}`,
+    desc,
+    embedStyle ? css : undefined,
+    [background, ...body],
+    lang,
+  );
   return { markup, css };
 }
 
-/** Renders a small standalone SVG showing an error message (escaped). */
+/** Renders a small standalone SVG showing an error message (escaped). Its root carries `data-hal-error="true"`. */
 export function renderErrorSvg(message: string, options?: { theme?: ThemeName; width?: number }): string {
   const W = normalizeWidth(options?.width);
   const { scope, css } = buildStylesheet(normalizeTheme(options?.theme), {});
@@ -764,5 +786,5 @@ export function renderErrorSvg(message: string, options?: { theme?: ThemeName; w
     textEl(PAD + iconR, baseline(H / 2 - CITATION.line / 2, { ...CITATION, bold: true }), '!', 'hal-error-icon-text', { ...CITATION, bold: true }, { anchor: 'middle' }),
     ...lines.map((line, i) => textEl(textX, baseline(top + i * CITATION.line, CITATION), line, 'hal-error-text', CITATION)),
   ];
-  return svgRoot(W, H, scope, text, '', css, body);
+  return svgRoot(W, H, scope, { error: true }, text, '', css, body);
 }

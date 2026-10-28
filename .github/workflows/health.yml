@@ -1,7 +1,8 @@
 name: Health
 
 # Checks the public SVG service (https://hal-search.vercel.app) every 6 hours: status, content type,
-# error images, function region (cdg1) and response time. See .github/scripts/health-check.mjs.
+# error images, empty lists for a query known to match publications, function region (cdg1) and response
+# time. See .github/scripts/health-check.mjs.
 # GitHub emails a failed scheduled run to the maintainer (Settings > Notifications > Actions).
 on:
   schedule:
