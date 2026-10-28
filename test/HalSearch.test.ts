@@ -50,10 +50,10 @@ vi.mock('../src/styles', () => ({
 }));
 
 vi.mock('../src/svg', () => ({
-  renderSvg: vi.fn(
-    (docs: HalDoc[], o: { mainColor?: string; theme?: string; totalFound: number }) =>
-      `<svg data-main="${o.mainColor ?? ''}" data-theme="${o.theme}" data-count="${docs.length}" data-total="${o.totalFound}"></svg>`,
-  ),
+  renderSvgParts: vi.fn((docs: HalDoc[], o: { mainColor?: string; theme?: string; totalFound: number }) => ({
+    markup: `<svg data-main="${o.mainColor ?? ''}" data-theme="${o.theme}" data-count="${docs.length}" data-total="${o.totalFound}"></svg>`,
+    css: `.hal-svg-test{--main:${o.mainColor ?? 'none'};--theme:${o.theme}}`,
+  })),
 }));
 
 vi.mock('../src/query', async (importOriginal) => {
@@ -91,7 +91,7 @@ vi.mock('../src/theme', () => {
 import { HalSearch } from '../src/HalSearch';
 import { fetchArticles } from '../src/api';
 import { renderError, renderLoading, renderMissingQuery, renderResults } from '../src/renderer';
-import { renderSvg } from '../src/svg';
+import { renderSvgParts } from '../src/svg';
 import { injectDefaultStyles } from '../src/styles';
 import { buildHalWebUrl } from '../src/query';
 
@@ -445,7 +445,7 @@ describe('HalSearch without a search criterion', () => {
     await expect(hs.setLevel(2)).resolves.toBeUndefined();
     hs.setColors({ mainColor: '#123456' });
     expect(fetchArticles).not.toHaveBeenCalled();
-    expect(renderSvg).not.toHaveBeenCalled();
+    expect(renderSvgParts).not.toHaveBeenCalled();
     expect(renderMissingQuery).toHaveBeenCalledTimes(4);
     expect(hs.state.page).toBe(1);
   });
@@ -640,7 +640,7 @@ describe('HalSearch display updates', () => {
     calls[0].resolve(reply(['a', 'b'], 7));
     await p;
     expect(container.querySelector('svg')?.getAttribute('data-main')).toBe('#111111');
-    expect(vi.mocked(renderSvg).mock.calls[0][1]).toMatchObject({
+    expect(vi.mocked(renderSvgParts).mock.calls[0][1]).toMatchObject({
       totalFound: 7,
       title: 'My papers',
       halUrl: 'https://hal.science/search/index/?q=x',
@@ -651,7 +651,7 @@ describe('HalSearch display updates', () => {
 
     hs.setColors({ mainColor: '#222222' });
     expect(fetchArticles).toHaveBeenCalledTimes(1);
-    expect(renderSvg).toHaveBeenCalledTimes(2);
+    expect(renderSvgParts).toHaveBeenCalledTimes(2);
     expect(container.querySelector('svg')?.getAttribute('data-main')).toBe('#222222');
     expect(container.querySelector('svg')?.getAttribute('data-count')).toBe('2');
     expect(container.style.getPropertyValue('--hal-accent')).toBe('#222222');

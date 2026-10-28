@@ -367,13 +367,14 @@ function normalizeLevel(lvl: unknown): DetailLevel {
   return lvl === 0 || lvl === 1 || lvl === 2 || lvl === 3 ? lvl : 1;
 }
 
+/** The root `<svg>`; `css` undefined leaves the `<style>` out (the caller attaches the stylesheet). */
 function svgRoot(
   w: number,
   h: number,
   scope: string,
   title: string,
   desc: string,
-  css: string,
+  css: string | undefined,
   body: string[],
   lang?: string,
 ): string {
@@ -382,7 +383,7 @@ function svgRoot(
       (lang ? ` lang="${escapeXml(lang)}">` : '>'),
     `<title>${escapeXml(title)}</title>`,
     ...(desc ? [`<desc>${escapeXml(desc)}</desc>`] : []),
-    `<style>${css}</style>`,
+    ...(css === undefined ? [] : [`<style>${css}</style>`]),
     ...body,
     '</svg>',
   ].join('\n');
@@ -630,8 +631,34 @@ function card(x: number, y: number, w: number, body: Block): Block {
 // Public API
 // ---------------------------------------------------------------------------
 
+/**
+ * An SVG rendered for a page (see renderSvgParts): the markup without its stylesheet, and that stylesheet.
+ * @internal
+ */
+export interface SvgParts {
+  /** `<svg>` markup without `<style>`: its colors and fonts come from `css` */
+  markup: string;
+  /** The stylesheet renderSvg embeds, scoped to the root's `hal-svg-<hash>` class */
+  css: string;
+}
+
 /** Renders the article list as a standalone SVG string (every dynamic value XML-escaped). */
 export function renderSvg(docs: HalDoc[], options: SvgRenderOptions): string {
+  return render(docs, options, true).markup;
+}
+
+/**
+ * renderSvg for an inline SVG in a page: the same markup without the embedded `<style>`, which a strict
+ * Content-Security-Policy (`style-src` without 'unsafe-inline') blocks; the caller attaches `css` as a
+ * constructable stylesheet instead. Several inline SVGs can share a page: the rules are scoped to the root's
+ * `hal-svg-<hash>` class, a hash of the rules themselves.
+ * @internal Used by HalSearch (output 'svg').
+ */
+export function renderSvgParts(docs: HalDoc[], options: SvgRenderOptions): SvgParts {
+  return render(docs, options, false);
+}
+
+function render(docs: HalDoc[], options: SvgRenderOptions, embedStyle: boolean): SvgParts {
   const opts = options ?? ({ totalFound: 0 } as SvgRenderOptions);
   const list = (Array.isArray(docs) ? docs : []).filter((d) => d && typeof d === 'object');
   // Built-in locale ('en' when absent or unknown): base labels, number formatting and plural forms.
@@ -717,7 +744,8 @@ export function renderSvg(docs: HalDoc[], options: SvgRenderOptions): string {
   const desc = list.map((d) => getTitle(d, labels)).join('\n');
   // `lang` only when a locale was asked for: the default output stays unchanged.
   const lang = typeof opts.locale === 'string' && opts.locale.trim() ? locale : undefined;
-  return svgRoot(W, H, scope, `${title} – ${countText}`, desc, css, [background, ...body], lang);
+  const markup = svgRoot(W, H, scope, `${title} – ${countText}`, desc, embedStyle ? css : undefined, [background, ...body], lang);
+  return { markup, css };
 }
 
 /** Renders a small standalone SVG showing an error message (escaped). */

@@ -207,8 +207,9 @@ describe('HalSearch with a locale', () => {
     await hs.search({ query: { idHal: 'jpugetgil' } });
     const svg = el.querySelector('svg');
     expect(svg?.getAttribute('lang')).toBe('fr');
-    // happy-dom drops what follows the SVG <style>: the body is covered by the renderSvg tests.
     expect(svg?.querySelector('title')?.textContent).toBe(`Publications – ${fr(9183)} résultats`);
+    // The cards too (the stylesheet is attached apart, not a <style> in the SVG).
+    expect(svg?.textContent).toContain('Article dans une revue');
     expect(el.getAttribute('lang')).toBe('fr');
   });
 });

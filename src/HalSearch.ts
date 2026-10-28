@@ -21,10 +21,11 @@ import { resolveLabels } from './labels';
 import { resolveLocale } from './locales';
 import { isSafeColor, paletteToCssVars, resolvePalette } from './theme';
 import { renderError, renderLoading, renderMissingQuery, renderResults } from './renderer';
-import { renderSvg } from './svg';
+import { renderSvgParts } from './svg';
 import { buildStructuredData, createStructuredDataScript, STRUCTURED_DATA_ATTRIBUTE } from './structured-data';
 import { attachStyleSheet, injectDefaultStyles } from './styles';
 import type { AttachedStyleSheet } from './styles';
+import { TRUSTED_TYPES_POLICY, trustedHtml } from './trusted-types';
 
 // ---------------------------------------------------------------------------
 // Types and defaults
@@ -46,11 +47,24 @@ export interface HalSearchOptions extends DisplayOptions {
   sort?: SortOrder;
   /** Default filters, merged under the filters given to search() */
   filters?: HalFilters;
-  /** Render the article list as HTML cards or as an inline SVG. Default: 'html' */
+  /**
+   * Render the article list as HTML cards or as an inline SVG. Default: 'html'
+   *
+   * The inline SVG works under a strict Content-Security-Policy (`style-src` without 'unsafe-inline'): its
+   * colors are a constructable stylesheet attached to `styleRoot`, not a `<style>` inside the SVG (that
+   * fallback is only used by browsers without constructable stylesheets). Under Trusted Types
+   * (`require-trusted-types-for 'script'`) the markup is inserted through a policy named `hal-search`: a page
+   * that restricts policy names must allow it (`trusted-types hal-search`), else the container shows an error
+   * and `onError` is called; HTML output needs no policy.
+   */
   output?: OutputFormat;
-  /** Inject default CSS. Default: true */
+  /** Inject default CSS. Default: true (the colors of the inline SVG are attached in any case) */
   injectStyles?: boolean;
-  /** Where default CSS is injected. Default: document (head). The web component passes its ShadowRoot. */
+  /**
+   * Where the stylesheets go: the default CSS and the per-instance ones (the 'auto' color overrides, the
+   * colors of the inline SVG). Default: the container's shadow root when it lives in one, else the document
+   * (`<head>`). The web component passes its ShadowRoot.
+   */
   styleRoot?: Document | ShadowRoot;
   /** Heading level of article titles in HTML output. Default: 3 */
   headingLevel?: 2 | 3 | 4 | 5 | 6;
@@ -108,6 +122,9 @@ const OVERRIDE_TARGETS: Record<(typeof COLOR_KEYS)[number], (keyof Palette)[]> =
 
 /** Attribute naming the fallback `<style>` that holds the 'auto' color overrides of an instance. */
 const COLORS_STYLE_ATTRIBUTE = 'data-hal-search-colors';
+
+/** Attribute naming the fallback `<style>` that holds the stylesheet of an instance's inline SVG. */
+const SVG_STYLE_ATTRIBUTE = 'data-hal-search-svg';
 
 /** Instances created by this copy of the library (the scope id also has a random part: several copies may share a page). */
 let instanceCount = 0;
@@ -169,6 +186,8 @@ export class HalSearch {
   private appliedVars: string[] = [];
   /** Scoped stylesheet of the color overrides for the 'auto' theme (light and dark sets) */
   private colorsSheet: AttachedStyleSheet | undefined;
+  /** Stylesheet of the inline SVG (output 'svg'), replaced on each render */
+  private svgSheet: AttachedStyleSheet | undefined;
   /** JSON-LD of the displayed documents (structuredData option) */
   private structuredDataScript: HTMLScriptElement | undefined;
 
@@ -321,6 +340,8 @@ export class HalSearch {
     for (const name of this.appliedVars) this.container.style.removeProperty(name);
     this.appliedVars = [];
     this._setColorsStyle({}, {});
+    this.svgSheet?.remove();
+    this.svgSheet = undefined;
     this.container.removeAttribute('data-hal-theme');
     if (this.locale) {
       if (this.previousLang === null) this.container.removeAttribute('lang');
@@ -425,8 +446,7 @@ export class HalSearch {
     const docs = response.response?.docs ?? [];
 
     if (this.output === 'svg') {
-      // renderSvg returns trusted markup: every dynamic value is XML-escaped by the renderer.
-      this.container.innerHTML = renderSvg(docs, {
+      const { markup, css } = renderSvgParts(docs, {
         lvl: this.lvl,
         theme: this.theme,
         groupBy: this.groupBy,
@@ -441,6 +461,21 @@ export class HalSearch {
         // Same filters as the count shown next to the link.
         halUrl: buildHalWebUrl(this.query, this.filters),
       });
+      try {
+        // Trusted markup: every dynamic value is XML-escaped by the renderer (TrustedHTML under Trusted Types).
+        this.container.innerHTML = trustedHtml(this.container.ownerDocument?.defaultView, markup);
+      } catch (err) {
+        // Trusted Types enforced and the hal-search policy refused: innerHTML only takes TrustedHTML.
+        // _request shows the error and calls onError (instead of onResults).
+        if ((err as Error | undefined)?.name !== 'TypeError') throw err;
+        throw new Error(
+          `HalSearch: this page enforces Trusted Types and does not allow the "${TRUSTED_TYPES_POLICY}" policy ` +
+            `that inserts the inline SVG: add it to the trusted-types directive, or use output 'html'.`,
+        );
+      }
+      // The colors: a stylesheet object (allowed by a strict CSP, unlike a <style> in the SVG), see attachStyleSheet.
+      if (this.svgSheet) this.svgSheet.update(css);
+      else this.svgSheet = attachStyleSheet(this.styleRoot, css, { [SVG_STYLE_ATTRIBUTE]: this.instanceId });
       // Set by renderLoading (renderResults and renderError clear it themselves).
       this.container.removeAttribute('aria-busy');
     } else {
@@ -489,7 +524,7 @@ export class HalSearch {
     this.structuredDataScript = script;
   }
 
-  /** SVG colors are baked into the markup: re-render from the last response, without fetching. */
+  /** SVG colors are baked into its stylesheet and scope class: re-render from the last response, without fetching. */
   private _rerenderSvg(): void {
     if (this.output === 'svg' && this.displayed) this._render(false);
   }

@@ -34,7 +34,10 @@ vi.mock('../src/styles', () => ({
 }));
 
 vi.mock('../src/svg', () => ({
-  renderSvg: vi.fn((docs: HalDoc[], o: { mainColor?: string }) => `<svg data-main="${o.mainColor ?? ''}" data-count="${docs.length}"></svg>`),
+  renderSvgParts: vi.fn((docs: HalDoc[], o: { mainColor?: string }) => ({
+    markup: `<svg data-main="${o.mainColor ?? ''}" data-count="${docs.length}"></svg>`,
+    css: '',
+  })),
 }));
 
 vi.mock('../src/query', async (importOriginal) => {
@@ -81,7 +84,7 @@ import { attributesToUrlParams, defineHalSearchElement, HAL_SEARCH_ATTRIBUTES, p
 import { fetchArticles } from '../src/api';
 import { parseUrlParams } from '../src/url-params';
 import { renderResults } from '../src/renderer';
-import { renderSvg } from '../src/svg';
+import { renderSvgParts } from '../src/svg';
 import { injectDefaultStyles, injectElementStyles } from '../src/styles';
 
 // ---------------------------------------------------------------------------
@@ -300,7 +303,7 @@ describe('<hal-search>', () => {
     // Mirrored on the host, where the shadow stylesheet declares the theme defaults
     expect(el.getAttribute('data-hal-theme')).toBe('dark');
     expect(mount.style.getPropertyValue('--hal-accent')).toBe('#222222');
-    expect(renderSvg).toHaveBeenLastCalledWith(expect.any(Array), expect.objectContaining({ theme: 'dark', mainColor: '#222222' }));
+    expect(renderSvgParts).toHaveBeenLastCalledWith(expect.any(Array), expect.objectContaining({ theme: 'dark', mainColor: '#222222' }));
   });
 
   it('re-creates the widget when a constructor-level attribute changes', async () => {

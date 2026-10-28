@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { HalSearch } from '../src/HalSearch';
 import { createStructuredDataScript, serializeJsonLd } from '../src/structured-data';
 import { TRUSTED_TYPES_POLICY } from '../src/trusted-types';
+import type { HalDoc } from '../src/types';
 
 // Trusted Types are not implemented by happy-dom: a fake `window.trustedTypes` records what goes through it.
 
@@ -38,9 +40,26 @@ function installTrustedTypes({ refuse = false } = {}): FakeFactory {
   return factory;
 }
 
+const innerHtml = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML') as PropertyDescriptor;
+
+/**
+ * Simulates `require-trusted-types-for 'script'` on innerHTML: a string throws a TypeError, a trusted value is
+ * inserted (happy-dom parses its string). Returns the spy of the setter.
+ */
+function enforceTrustedHtml() {
+  return vi.spyOn(Element.prototype, 'innerHTML', 'set').mockImplementation(function (this: Element, value: unknown) {
+    if (typeof value === 'string' && value !== '') {
+      throw new TypeError("Failed to set the 'innerHTML' property on 'Element': This document requires 'TrustedHTML' assignment.");
+    }
+    innerHtml.set?.call(this, String(value));
+  });
+}
+
 afterEach(() => {
   delete win().trustedTypes;
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  document.body.innerHTML = '';
 });
 
 // ---------------------------------------------------------------------------
@@ -85,5 +104,60 @@ describe('createStructuredDataScript under Trusted Types', () => {
     const script = createStructuredDataScript(document, data);
     expect(setText).not.toHaveBeenCalled();
     expect(script.textContent).toBe(serializeJsonLd(data));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Inline SVG (HalSearch output 'svg')
+// ---------------------------------------------------------------------------
+
+describe('HalSearch output svg under Trusted Types', () => {
+  const docs: HalDoc[] = [{ docid: '1', uri_s: 'https://hal.science/hal-1', title_s: ['Graph versioning'], producedDateY_i: 2024 }];
+
+  function setup(): HTMLElement {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ responseHeader: { status: 0 }, response: { numFound: 1, start: 0, docs } }))),
+    );
+    const el = document.createElement('div');
+    document.body.appendChild(el);
+    return el;
+  }
+
+  it('inserts the SVG markup as TrustedHTML of the hal-search policy', async () => {
+    const factory = installTrustedTypes();
+    const el = setup();
+    const setter = enforceTrustedHtml();
+    const onError = vi.fn();
+    await new HalSearch({ container: el, output: 'svg', injectStyles: false, onError }).search({ query: { idHal: 'x' } });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(factory.createPolicy).toHaveBeenCalledTimes(1);
+    const values = setter.mock.calls.map(([value]) => value as unknown).filter((value) => value instanceof FakeTrusted);
+    expect(values).toHaveLength(1);
+    expect(values[0]).toMatchObject({ kind: 'html' });
+    expect(String(values[0])).toMatch(/^<svg /);
+    expect(el.querySelector('svg > title')?.textContent).toBe('Publications – 1 result');
+  });
+
+  it('shows a clear error, and calls onError, when the page refuses the policy', async () => {
+    installTrustedTypes({ refuse: true });
+    const el = setup();
+    enforceTrustedHtml();
+    const onError = vi.fn();
+    const onResults = vi.fn();
+    const result = await new HalSearch({ container: el, output: 'svg', injectStyles: false, onError, onResults }).search({
+      query: { idHal: 'x' },
+    });
+
+    expect(result).toBeUndefined();
+    expect(el.querySelector('svg')).toBeNull();
+    expect(onResults).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+    const message = (onError.mock.calls[0][0] as Error).message;
+    expect(message).toContain('Trusted Types');
+    expect(message).toContain(`"${TRUSTED_TYPES_POLICY}"`);
+    expect(message).toContain("output 'html'");
+    expect(el.querySelector('[role="alert"], .hal-error')?.textContent).toContain(message);
   });
 });
