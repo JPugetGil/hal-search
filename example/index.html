@@ -316,6 +316,13 @@
         <fieldset>
           <legend>Display</legend>
           <div class="field">
+            <label for="lang">Language of the labels</label>
+            <select id="lang">
+              <option value="en" lang="en">English</option>
+              <option value="fr" lang="fr">Français</option>
+            </select>
+          </div>
+          <div class="field">
             <label for="output">Output</label>
             <select id="output">
               <option value="html">HTML cards (interactive)</option>
@@ -621,6 +628,7 @@
         setIfFilled(params, 'yearTo', $('year-to').value);
         if ($('oa').checked) params.set('oa', '1');
 
+        params.set('lang', $('lang').value);
         params.set('output', $('output').value);
         params.set('lvl', $('lvl').value);
         setIfFilled(params, 'rows', $('rows').value);
@@ -649,6 +657,7 @@
         $('year-to').value = state.filters.yearTo ?? '';
         $('oa').checked = state.filters.openAccess === true;
 
+        $('lang').value = state.locale ?? 'en';
         $('output').value = state.output ?? 'html';
         $('lvl').value = String(state.lvl ?? 1);
         $('rows').value = state.rows ?? '';
@@ -713,6 +722,7 @@
 
         // Options fixed at construction: a change needs a new instance.
         const config = {
+          locale: state.locale,
           output: state.output ?? 'html',
           groupBy: state.groupBy,
           highlightAuthors: state.highlightAuthors,
@@ -773,6 +783,7 @@
 
       function buildJsSnippet(state) {
         const options = { container: '#publications' };
+        if (state.locale && state.locale !== 'en') options.locale = state.locale;
         if (state.output === 'svg') options.output = 'svg';
         if (state.lvl !== undefined && state.lvl !== 1) options.lvl = state.lvl;
         if (state.rows !== undefined && state.rows !== 10) options.rows = state.rows;
