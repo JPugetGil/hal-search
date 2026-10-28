@@ -2,6 +2,7 @@ import type { ColorOptions, HalApiResponse, HalSearchOptions, Labels, SearchPara
 import { HalSearch, HAL_SEARCH_DEFAULTS } from './HalSearch';
 import { hasQueryCriterion } from './query';
 import { parseUrlParams } from './url-params';
+import { injectElementStyles } from './styles';
 
 // Node safety: this module is imported by index.ts, which the SSR imports in Node.
 // Nothing at module level may touch HTMLElement, customElements, window or document:
@@ -163,12 +164,12 @@ function createElementClass(): CustomElementConstructor {
     constructor() {
       super();
       const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
-      const hostStyle = document.createElement('style');
-      hostStyle.textContent = ':host{display:block}:host([hidden]){display:none}';
       this.mount = document.createElement('div');
-      // Lets the host page theme the widget: hal-search::part(container) { --hal-accent: ... }
+      // Lets the host page adjust the layout: hal-search::part(container) { max-width: 40rem }
       this.mount.setAttribute('part', 'container');
-      root.replaceChildren(hostStyle, this.mount);
+      root.replaceChildren(this.mount);
+      // Theme defaults on :host, so `hal-search { --hal-accent: … }` in the page wins over them.
+      injectElementStyles(root);
     }
 
     connectedCallback(): void {
@@ -204,12 +205,20 @@ function createElementClass(): CustomElementConstructor {
       const appearanceKey = JSON.stringify(snapshot.appearance);
       const searchKey = JSON.stringify(snapshot.search);
 
+      // Selects the theme defaults declared on :host (see elementCss).
+      if (this.getAttribute('data-hal-theme') !== snapshot.appearance.theme) {
+        this.setAttribute('data-hal-theme', snapshot.appearance.theme);
+      }
+
       if (!this.instance || configKey !== this.configKey) {
         this.instance?.destroy();
         this.instance = new HalSearch({
           ...snapshot.config,
           ...snapshot.appearance,
           container: this.mount,
+          // The element's own stylesheet is injected by the constructor; the style root receives the
+          // per-instance color overrides of the 'auto' theme.
+          injectStyles: false,
           styleRoot: this.shadowRoot ?? undefined,
           onResults: (response: HalApiResponse) => this._emit('hal-results', { response }),
           onError: (error: Error) => this._emit('hal-error', { error }),
@@ -242,6 +251,7 @@ function createElementClass(): CustomElementConstructor {
     private _teardown(): void {
       this.instance?.destroy();
       this.instance = undefined;
+      this.removeAttribute('data-hal-theme');
       this.configKey = '';
       this.appearanceKey = '';
       this.appearance = undefined;

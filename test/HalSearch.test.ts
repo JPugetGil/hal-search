@@ -32,7 +32,22 @@ vi.mock('../src/renderer', () => ({
   }),
 }));
 
-vi.mock('../src/styles', () => ({ injectDefaultStyles: vi.fn() }));
+vi.mock('../src/styles', () => ({
+  injectDefaultStyles: vi.fn(),
+  // Same contract as the real one (tested in styles.test.ts), observable in the DOM: a <style> with the attributes.
+  attachStyleSheet: vi.fn((root: Document | ShadowRoot, css: string, attributes: Record<string, string> = {}) => {
+    const style = document.createElement('style');
+    for (const [name, value] of Object.entries(attributes)) style.setAttribute(name, value);
+    style.textContent = css;
+    (root.nodeType === 9 ? (root as Document).head : root).appendChild(style);
+    return {
+      update: (next: string) => {
+        style.textContent = next;
+      },
+      remove: () => style.remove(),
+    };
+  }),
+}));
 
 vi.mock('../src/svg', () => ({
   renderSvg: vi.fn(

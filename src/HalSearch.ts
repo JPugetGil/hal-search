@@ -20,7 +20,8 @@ import { resolveLabels } from './labels';
 import { isSafeColor, paletteToCssVars, resolvePalette } from './theme';
 import { renderError, renderLoading, renderMissingQuery, renderResults } from './renderer';
 import { renderSvg } from './svg';
-import { injectDefaultStyles } from './styles';
+import { attachStyleSheet, injectDefaultStyles } from './styles';
+import type { AttachedStyleSheet } from './styles';
 
 // ---------------------------------------------------------------------------
 // Types and defaults
@@ -64,7 +65,7 @@ const OVERRIDE_TARGETS: Record<(typeof COLOR_KEYS)[number], (keyof Palette)[]> =
   mainColor: ['accent', 'accentHover', 'accentText'],
 };
 
-/** Attribute naming the `<style>` that holds the 'auto' color overrides of an instance. */
+/** Attribute naming the fallback `<style>` that holds the 'auto' color overrides of an instance. */
 const COLORS_STYLE_ATTRIBUTE = 'data-hal-search-colors';
 
 /** Instances created by this copy of the library (the scope id also has a random part: several copies may share a page). */
@@ -120,8 +121,8 @@ export class HalSearch {
   private destroyed = false;
   /** Inline custom properties set for the 'light' and 'dark' themes */
   private appliedVars: string[] = [];
-  /** Scoped `<style>` of the color overrides for the 'auto' theme (light and dark sets) */
-  private colorsStyle: HTMLStyleElement | undefined;
+  /** Scoped stylesheet of the color overrides for the 'auto' theme (light and dark sets) */
+  private colorsSheet: AttachedStyleSheet | undefined;
 
   constructor(options: HalSearchOptions) {
     if (!options || !options.container) {
@@ -454,14 +455,15 @@ export class HalSearch {
   }
 
   /**
-   * Creates, updates or removes (both sets empty) the `<style>` of the 'auto' color overrides, in the style root.
+   * Creates, updates or removes (both sets empty) the stylesheet of the 'auto' color overrides, in the style root
+   * (constructable when supported, so a strict CSP allows it; else `<style data-hal-search-colors>`).
    * Its selector matches this container only (`data-hal-id`) and outranks the default theme rules.
    */
   private _setColorsStyle(light: Record<string, string>, dark: Record<string, string>): void {
     const el = this.container;
     if (Object.keys(light).length === 0 && Object.keys(dark).length === 0) {
-      this.colorsStyle?.remove();
-      this.colorsStyle = undefined;
+      this.colorsSheet?.remove();
+      this.colorsSheet = undefined;
       el.removeAttribute('data-hal-id');
       return;
     }
@@ -471,18 +473,8 @@ export class HalSearch {
       `${selector} {\n${declarations(light, '  ')}\n}\n` +
       `@media (prefers-color-scheme: dark) {\n  ${selector} {\n${declarations(dark, '    ')}\n  }\n}\n`;
 
-    if (!this.colorsStyle || !this.colorsStyle.parentNode) {
-      const root = this.styleRoot;
-      const isDocument = root.nodeType === 9; // Node.DOCUMENT_NODE
-      const doc = isDocument ? (root as Document) : (root.ownerDocument ?? document);
-      const style = doc.createElement('style');
-      style.setAttribute(COLORS_STYLE_ATTRIBUTE, this.instanceId);
-      // After the default stylesheet (inserted first in <head>); the selector specificity wins anyway.
-      const parent = isDocument ? ((root as Document).head ?? (root as Document).documentElement) : root;
-      parent.appendChild(style);
-      this.colorsStyle = style;
-    }
-    if (this.colorsStyle.textContent !== css) this.colorsStyle.textContent = css;
+    if (this.colorsSheet) this.colorsSheet.update(css);
+    else this.colorsSheet = attachStyleSheet(this.styleRoot, css, { [COLORS_STYLE_ATTRIBUTE]: this.instanceId });
   }
 }
 
