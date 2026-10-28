@@ -9,7 +9,7 @@ import type {
   UrlState,
 } from './types';
 import { isSafeColor } from './theme';
-import { normaliseOrcid } from './query';
+import { escapeSolrValue, normaliseOrcid } from './query';
 import { DEFAULT_LOCALE, matchLocale } from './locales';
 
 export interface ParseLimits {
@@ -137,10 +137,20 @@ function parseQuery(params: URLSearchParams): HalQuery {
   if (collection) query.collection = collection;
   const text = freeText(str(params, 'search'), MAX_QUERY_LENGTH);
   if (text) query.text = text;
-  // `uid` is the ≤0.4 name of the raw query.
-  const solr = freeText(str(params, 'q'), MAX_QUERY_LENGTH) ?? freeText(str(params, 'uid'), MAX_QUERY_LENGTH);
+  const solr = freeText(str(params, 'q'), MAX_QUERY_LENGTH) ?? legacyUid(str(params, 'uid'));
   if (solr) query.solr = solr;
   return query;
+}
+
+/**
+ * `uid` is the ≤0.4 name of the raw query. 0.4 always sent it as a quoted phrase: plain text keeps that
+ * meaning (`uid=Jey Puget Gil` → `"Jey Puget Gil"`), field queries such as `authIdHal_s:x` are passed raw
+ * (quoting them made 0.4 return no result).
+ */
+function legacyUid(value: string | undefined): string | undefined {
+  const uid = freeText(value, MAX_QUERY_LENGTH);
+  if (!uid) return undefined;
+  return /[:"]/.test(uid) ? uid : `"${escapeSolrValue(uid)}"`;
 }
 
 function parseFilters(params: URLSearchParams): HalFilters {

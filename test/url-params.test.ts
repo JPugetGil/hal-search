@@ -49,6 +49,14 @@ describe('parseUrlParams', () => {
     expect(parse('uid=old&q=new').query).toEqual({ solr: 'new' });
   });
 
+  it('keeps the 0.4 phrase search for a plain-text legacy uid', () => {
+    expect(parse('uid=Jey%20Puget%20Gil').query).toEqual({ solr: '"Jey Puget Gil"' });
+    expect(parse('uid=jpugetgil').query).toEqual({ solr: '"jpugetgil"' });
+    // Field queries and explicit quotes are passed raw; only `uid` gets this treatment, not `q`.
+    expect(parse('uid=%22exact%20phrase%22').query).toEqual({ solr: '"exact phrase"' });
+    expect(parse('q=Jey%20Puget%20Gil').query).toEqual({ solr: 'Jey Puget Gil' });
+  });
+
   it('drops invalid query values', () => {
     expect(
       parse('idHal=a"b&orcid=1234&structId=12a&collection=../x&search=%20%20&q=').query,
@@ -281,6 +289,6 @@ describe('parseUrlParams(toUrlParams(x))', () => {
 
   it('round-trips legacy URLs into the new scheme', () => {
     const legacy = parse('uid=jpugetgil&type=svg&lvl=2&bg=%23fff');
-    expect(toUrlParams(legacy).toString()).toBe('q=jpugetgil&lvl=2&output=svg&bg=%23fff');
+    expect(toUrlParams(legacy).toString()).toBe('q=%22jpugetgil%22&lvl=2&output=svg&bg=%23fff');
   });
 });
